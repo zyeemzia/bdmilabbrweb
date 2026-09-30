@@ -56,21 +56,31 @@
   --shadow:0 4px 14px rgba(0,0,0,.10);
 }
 *{box-sizing:border-box}
+/* The `hidden` attribute only carries `display:none` from the UA stylesheet, so
+   ANY explicit display in here silently beats it. That is not hypothetical:
+   `.wotd` is display:flex and `#more` is a .btn at display:inline-flex, so both
+   stayed on screen every time the code set `hidden = true`. Author-level and
+   !important so it cannot be outranked again. */
+[hidden]{display:none!important}
 html,body{margin:0;padding:0}
 body{
   background:var(--scaffold); color:var(--text); font-family:var(--sans);
   font-size:15px; line-height:1.45; -webkit-text-size-adjust:100%;
   padding-bottom:env(safe-area-inset-bottom);
+  /* No grey flash on tap, and no 300 ms wait before a tap registers. */
+  -webkit-tap-highlight-color:transparent;
+  overscroll-behavior-y:contain;
 }
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 
 /* ---------- header ---------- */
+.topbar{position:sticky; top:0; z-index:40; background:var(--scaffold); box-shadow:var(--shadow)}
+.topbar .searchrow{padding:10px 16px 12px}
 .hud{
-  position:sticky; top:0; z-index:40; background:var(--header);
-  border-bottom:1px solid var(--border); box-shadow:var(--shadow);
-  display:flex; align-items:center; gap:12px; padding:10px 16px;
+  background:var(--header); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:8px; padding:10px 16px;
   padding-top:calc(10px + env(safe-area-inset-top));
 }
 .brand{display:flex; flex-direction:column; min-width:0; flex:1}
@@ -111,6 +121,9 @@ button{cursor:pointer}
 #q{
   flex:1; background:var(--field); border:1px solid var(--border); border-radius:13px;
   padding:13px 44px 13px 40px; min-width:0;
+  /* Must be >=16px: iOS Safari zooms the whole page when focusing a smaller
+     input, and the user then has to pinch back out after every search. */
+  font-size:16px;
 }
 #q::placeholder{color:var(--faint)}
 #q:focus{border-color:var(--accent); outline:none}
@@ -143,8 +156,17 @@ button{cursor:pointer}
   background:var(--field); border:1px solid var(--border); border-radius:11px;
   padding:9px 12px; max-width:min(100%,320px); font-weight:600;
 }
-.letters{display:none; gap:3px; flex-wrap:wrap}
+.chiprow{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap}
+#tools{display:flex; flex-direction:column; gap:10px}
+
+/* One scrollable row, never three wrapped ones — 26 wrapped buttons cost 61 px
+   of a phone's viewport for something that is glanced at, not read. */
+.letters{display:none; gap:4px; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden;
+  scrollbar-width:none; -ms-overflow-style:none; padding-bottom:2px;
+  scroll-snap-type:x proximity; overscroll-behavior-x:contain}
+.letters::-webkit-scrollbar{display:none}
 .letters.on{display:flex}
+.letters button{scroll-snap-align:center}
 .letters button{
   background:var(--panel); border:1px solid var(--border); color:var(--subtext);
   width:29px; height:29px; border-radius:8px; font-family:var(--mono); font-size:11px; font-weight:700;
@@ -184,6 +206,7 @@ button{cursor:pointer}
 .acts button.fav svg{fill:var(--accent)}
 mark{background:var(--accent-soft); color:inherit; border-radius:3px; padding:0 1px}
 #more{margin:0 16px 40px; width:calc(100% - 32px)}
+#sentinel{height:1px}
 .empty{
   margin:36px 16px; text-align:center; color:var(--faint);
   font-family:var(--mono); font-size:12px; letter-spacing:.1em;
@@ -201,6 +224,11 @@ dialog::backdrop{background:rgba(0,0,0,.62)}
 }
 .dlg-b{padding:14px 18px; display:flex; flex-direction:column; gap:11px}
 .dlg-b p{margin:0; color:var(--subtext); font-size:13px}
+/* Confirm bodies are multi-line now: the consequence of a delete is spelled out
+   under the question. textContent keeps the newlines, so honour them. */
+#a-body{white-space:pre-line}
+.note{border-left:3px solid var(--accent); background:var(--accent-soft); padding:10px 12px;
+      border-radius:0 10px 10px 0; font-size:12.5px; color:var(--text); line-height:1.5}
 .dlg-b label{font-size:11px; font-family:var(--mono); letter-spacing:.1em; color:var(--subtext)}
 .dlg-b input[type=text],.dlg-b textarea,.dlg-b select{
   width:100%; background:var(--field); border:1px solid var(--border);
@@ -243,17 +271,67 @@ kbd{
   font-family:var(--mono); font-size:10px; border:1px solid var(--border);
   border-bottom-width:2px; border-radius:4px; padding:1px 4px; color:var(--subtext);
 }
-@media (max-width:560px){
-  .abbr{min-width:60px; max-width:44%}
+/* ------------------------------------------------------------------------
+   Wide screens: the manage button is redundant because #tools is inline.
+   ------------------------------------------------------------------------ */
+@media (min-width:760px){ #tools-btn{display:none} }
+
+/* ------------------------------------------------------------------------
+   Phones and small tablets. Before this, the control block was 452 px of a
+   580 px viewport — 78% chrome, two visible results. #tools now collapses
+   behind the header's manage button, so the default view is search, chips,
+   counts, results.
+   ------------------------------------------------------------------------ */
+@media (max-width:759px){
+  #tools{display:none}
+  body.tools-open #tools{display:flex}
+  #tools .row{gap:6px}
+  #tools .btn{flex:1 1 auto; justify-content:center; min-height:42px}
+  #cat{max-width:100%; flex:1 1 100%; min-height:42px}
+  .chip{padding:9px 14px; min-height:40px}      /* 40 px minimum touch target */
+  .letters button{width:34px; height:34px}
+  .acts button{width:40px; height:40px}          /* was 32 — too small to hit */
+  .iconbtn{width:40px; height:40px}
+  .wotd{margin:8px 12px 0; padding:9px 11px; gap:7px}
+  .wotd i{font-size:9px; letter-spacing:.12em}
+  .topbar .searchrow{padding:8px 12px 10px}
+  #q{padding:11px 42px 11px 38px}
+  .hud{gap:6px; padding:8px 12px; padding-top:calc(8px + env(safe-area-inset-top))}
+  .controls{padding:10px 12px 0; gap:8px}
+  #list{padding:0 12px 40px; gap:6px}
+  #list li{padding:9px 10px}
+  .abbr{min-width:58px; max-width:42%; font-size:13.5px}
+  .brand b{font-size:15px; letter-spacing:.1em}
   .brand span{display:none}
-  #list{gap:6px}
+  .stat{font-size:10px; gap:10px}
+  #more{margin:0 12px 40px; width:calc(100% - 24px); min-height:44px}
+  dialog{width:calc(100vw - 20px)}
+  .dlg-f .btn{flex:1 1 auto; justify-content:center; min-height:44px}
+}
+@media (max-width:420px){
+  /* At this width the three chips plus the counts cannot share a line. */
+  .chiprow{gap:6px}
+  .stat{flex-basis:100%}
+  .abbr{max-width:46%}
+}
+
+/* Taps should feel immediate even before any state change lands. */
+.btn:active,.chip:active,.iconbtn:active,.acts button:active,.letters button:active{transform:scale(.97)}
+@media (prefers-reduced-motion:reduce){
+  .btn:active,.chip:active,.iconbtn:active,.acts button:active,.letters button:active{transform:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
+<!-- Header and search travel together and stay pinned. On a phone the search
+     box is the one control that must always be a tap away. -->
+<div class="topbar">
 <header class="hud">
   <div class="brand"><b>BD MIL ABBR</b><span>Bangladesh military abbreviation database &middot; offline</span></div>
+  <button class="iconbtn" id="tools-btn" title="Manage" aria-label="Manage" aria-expanded="false">
+    <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/></svg>
+  </button>
   <button class="iconbtn" id="theme" title="Toggle theme" aria-label="Toggle theme">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
   </button>
@@ -261,22 +339,32 @@ kbd{
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.4 2.3c-.6.3-.9.8-.9 1.4v.5"/><path d="M12 17h.01"/></svg>
   </button>
 </header>
+<div class="searchrow">
+  <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3" stroke-linecap="round"/></svg>
+  <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search abbreviation or meaning…" aria-label="Search">
+  <button id="clear" title="Clear (Esc)" aria-label="Clear search"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</div>
+</div>
 
 <section class="wotd" id="wotd" hidden></section>
 
 <div class="controls">
-  <div class="searchrow">
-    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3" stroke-linecap="round"/></svg>
-    <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search abbreviation or meaning…" aria-label="Search">
-    <button id="clear" title="Clear (Esc)" aria-label="Clear search"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <!-- Chips and counts share one line so a phone spends a row on them, not two. -->
+  <div class="chiprow">
+    <div class="row" role="group" aria-label="Search mode">
+      <button class="chip" id="m-smart" aria-pressed="true">SMART</button>
+      <button class="chip" id="m-az" aria-pressed="false">A-Z</button>
+      <button class="chip" id="m-fav" aria-pressed="false">FAVORITES</button>
+    </div>
+    <div class="stat" id="stat"></div>
   </div>
 
-  <div class="row" role="group" aria-label="Search mode">
-    <button class="chip" id="m-smart" aria-pressed="true">SMART</button>
-    <button class="chip" id="m-az" aria-pressed="false">A-Z</button>
-    <button class="chip" id="m-fav" aria-pressed="false">FAVORITES</button>
-  </div>
+  <div class="letters" id="letters" role="group" aria-label="Jump to letter"></div>
 
+  <!-- Everything that CHANGES the database. Inline on a wide screen; behind the
+       header's manage button on a phone, where five wrapping buttons were
+       eating 78% of the viewport and left two rows of results visible. -->
+  <div id="tools">
   <div class="row">
     <select id="cat" aria-label="Category"></select>
     <button class="btn" id="addcat"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>CATEGORY</button>
@@ -289,13 +377,15 @@ kbd{
     <button class="btn" id="import"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>IMPORT</button>
     <button class="btn" id="export"><svg viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"/></svg>EXPORT</button>
     <button class="btn" id="quiz"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>FLASHCARDS</button>
+    <button class="btn" id="restore" title="Put back any built-in BD MIL entry that is missing — deleted, or replaced by an edit"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg>RESTORE DATABASE</button>
   </div>
-
-  <div class="letters" id="letters" role="group" aria-label="Jump to letter"></div>
-  <div class="stat" id="stat"></div>
+  </div>
 </div>
 
 <ul id="list" aria-live="polite"></ul>
+<!-- Outside the <ul> on purpose: rows use content-visibility, and a sentinel
+     inside a skipped subtree would never be observed. -->
+<div id="sentinel" aria-hidden="true" hidden></div>
 <button class="btn" id="more" hidden></button>
 <p class="empty" id="empty" hidden></p>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -376,6 +466,16 @@ kbd{
   <div class="dlg-b">
     <p>Offline abbreviation database. Everything you add, favourite or import is stored in this
        browser only &mdash; nothing is uploaded, and there is no server.</p>
+    <p class="note"><b>If you delete something.</b> It only disappears from <i>your</i> copy, in
+       <i>this</i> browser. The published page is untouched, and no one else sees any difference.
+       The 2,651 built-in BD MIL entries ship inside the page itself, so they are never really gone
+       &mdash; <b>RESTORE DATABASE</b> puts back every one that is missing and removes nothing.
+       You will find it in the tools row, which on a narrow screen is behind the
+       <b>&ctdot;</b> button in the header.</p>
+    <p class="note">What restore <b>cannot</b> bring back: an entry that is not in the built-in set,
+       any star (restored entries arrive unstarred), and anything in a category you created yourself
+       &mdash; restore only ever refills the built-in category, even after you rename it. A built-in
+       you <i>edited</i> counts as missing, so restoring returns the original alongside your version.</p>
     <p><b>SMART</b> matches anywhere in the entry and ranks by relevance.
        <b>A-Z</b> matches from the start of the abbreviation or of any word in the meaning, and shows
        the letter strip. <b>FAVORITES</b> narrows to starred entries in the current category.</p>
@@ -402,8 +502,36 @@ kbd{
    =========================================================================== */
 
 const SEED = JSON.parse(document.getElementById('seed').textContent);
+/* Every built-in entry, flattened, so a delete prompt can tell the user whether
+   the thing they are about to remove is recoverable. Built once — membership is
+   asked per row in a confirm dialog, not per frame. */
+const SEED_RAW = new Set();
+/* Also indexed PER CATEGORY. "Can RESTORE DATABASE put this row back?" is a
+   question about THIS category, because restore only ever writes into the seed's
+   own category — a flat set answers a different question and the delete prompts
+   were promising recovery for rows in user-made categories that restore never
+   touches. Reachable in one step: Export, then Import into a new category. */
+const SEED_BY_CAT = {};
+Object.keys(SEED).forEach(c => {
+  SEED_BY_CAT[c] = new Set();
+  SEED[c].forEach(e => { SEED_RAW.add(e.r); SEED_BY_CAT[c].add(e.r); });
+});
+const seedHas = (cat, raw) => !!SEED_BY_CAT[cat] && SEED_BY_CAT[cat].has(raw);
+
+/* The category holding the built-ins can be RENAMED, so the seed's key is not
+   always its current name. Without this, restore looked for 'BD MIL', found
+   nothing, and built a SECOND category with a complete 2,651-entry duplicate —
+   while the renamed one kept its gaps and could never be repaired again. */
+const seedTarget = (c) => (c === 'BD MIL' ? (sget('seedcat') || 'BD MIL') : c);
 const K = 'bdmilabbr.';
-const RENDER_CAP = 3000;   // above this, render in chunks instead of all at once
+/* Rows put into the DOM at a time. Rendering all 2,651 at once cost 45,285 DOM
+   nodes, a 2-4 SECOND rebuild, and a 141 ms style recalculation on every theme
+   flip — on a desktop CPU; a phone is several times slower again. A CSS custom
+   property changing on :root invalidates style for every element that reads it,
+   so the cost of the toggle was a direct function of how many rows existed.
+   More arrive as you scroll, via the IntersectionObserver below. */
+const CHUNK = 60;
+const GROW_MARGIN = 500;   // px past the viewport bottom at which to top up
 
 /* ---------- storage: never let a blocked/full store break the session ------ */
 let storageOk = true;
@@ -422,7 +550,7 @@ function sdel(k){ try { localStorage.removeItem(K+k); } catch(_){} }
 function jget(k,fb){ const r = sget(k); if (r === null) return fb; try { return JSON.parse(r); } catch(_){ return fb; } }
 
 /* ---------- model ---------------------------------------------------------- */
-const state = { cats:[], db:{}, fav:{}, cat:'', q:'', az:false, favOnly:false, shown:[], cap:RENDER_CAP, sel:-1 };
+const state = { cats:[], db:{}, fav:{}, cat:'', q:'', az:false, favOnly:false, shown:[], cap:CHUNK, sel:-1 };
 
 /* Shorter side is the abbreviation, longer side the meaning — the same rule
    BD MIL OFFICE uses, which is what lets one store hold "ABBR - Meaning" and
@@ -469,9 +597,9 @@ function load(){
 
 const entriesOf = c => state.db[c] || [];
 const favOf = c => state.fav[c] || (state.fav[c] = new Set());
-function persist(c){ sset('e.'+c, JSON.stringify(entriesOf(c))); }
+function persist(c){ return sset('e.'+c, JSON.stringify(entriesOf(c))); }
 function persistFav(c){ sset('f.'+c, JSON.stringify(Array.from(favOf(c)))); }
-function persistCats(){ sset('cats', JSON.stringify(state.cats)); }
+function persistCats(){ return sset('cats', JSON.stringify(state.cats)); }
 
 /* ---------- ranking (port of DictionaryController._relevance) -------------- */
 function relevance(lower, q){
@@ -510,13 +638,13 @@ function runFilter(){
              .map(p => p[1]);
   }
   state.shown = out;
-  state.cap = RENDER_CAP;
+  state.cap = CHUNK;
   state.sel = -1;
 }
 
 /* ---------- dom refs ------------------------------------------------------- */
 const $ = id => document.getElementById(id);
-const elList=$('list'), elEmpty=$('empty'), elMore=$('more'), elStat=$('stat'),
+const elList=$('list'), elEmpty=$('empty'), elMore=$('more'), elStat=$('stat'), elSentinel=$('sentinel'),
       elQ=$('q'), elClear=$('clear'), elCat=$('cat'), elLetters=$('letters'), elWotd=$('wotd');
 
 /* ---------- small helpers -------------------------------------------------- */
@@ -569,10 +697,15 @@ function dlg(el){
     el.showModal();
   });
 }
-async function ask(title, body, okLabel){
+/* `destructive` defaults to true because every original caller was a delete.
+   It resets the class as well as the label: the button is markup-styled red, so
+   a constructive confirm like RESTORE was asking for consent with a red
+   destructive button. */
+async function ask(title, body, okLabel, destructive){
   $('a-title').textContent = title;
   $('a-body').textContent = body;
   $('a-ok').textContent = okLabel || 'CONFIRM';
+  $('a-ok').className = 'btn primary' + (destructive === false ? '' : ' danger');
   return (await dlg($('d-ask'))) === 'ok';
 }
 
@@ -584,64 +717,112 @@ const ICON = {
 };
 
 /* ---------- render --------------------------------------------------------- */
-function render(){
+/* One row. Split out of render() so growList() can append without rebuilding
+   what is already on screen — a rebuild of the visible rows on every scroll
+   would be the whole problem again, just spread out. */
+function rowNode(raw, idx, q, fav){
+  const e = parseEntry(raw);
+  const li = document.createElement('li');
+  li.dataset.raw = raw; li.dataset.i = String(idx);
+
+  const a = document.createElement('span'); a.className = 'abbr';
+  a.appendChild(highlight(e.a || '—', q));
+  const m = document.createElement('span'); m.className = 'mean';
+  m.appendChild(highlight(e.m, q));
+
+  const acts = document.createElement('span'); acts.className = 'acts';
+  const starred = fav.has(raw);
+  acts.appendChild(mkAct('fav'+(starred?' fav':''), starred?'Remove favorite':'Add favorite', ICON.star, 'fav'));
+  acts.appendChild(mkAct('', 'Edit', ICON.edit, 'edit'));
+  acts.appendChild(mkAct('', 'Copy', ICON.copy, 'copy'));
+  acts.appendChild(mkAct('del', 'Remove', ICON.del, 'del'));
+
+  li.append(a, m, acts);
+  return li;
+}
+
+function buildRows(from, to){
   const q = state.q.toLowerCase().trim();
   const fav = favOf(state.cat);
-  const total = state.shown.length;
-  const slice = state.shown.slice(0, state.cap);
-
   const frag = document.createDocumentFragment();
-  slice.forEach((raw, idx) => {
-    const e = parseEntry(raw);
-    const li = document.createElement('li');
-    li.dataset.raw = raw; li.dataset.i = String(idx);
+  for (let i = from; i < to; i++) frag.appendChild(rowNode(state.shown[i], i, q, fav));
+  return frag;
+}
 
-    const a = document.createElement('span'); a.className = 'abbr';
-    a.appendChild(highlight(e.a || '—', q));
-    const m = document.createElement('span'); m.className = 'mean';
-    m.appendChild(highlight(e.m, q));
+/* Full rebuild — only on a new filter, category change or mutation. */
+function render(){
+  const total = state.shown.length;
+  state.cap = Math.min(state.cap || CHUNK, total);
+  elList.replaceChildren(buildRows(0, state.cap));
+  paintTail();
+  topUp();
+}
 
-    const acts = document.createElement('span'); acts.className = 'acts';
-    const starred = fav.has(raw);
-    acts.appendChild(mkAct('fav'+(starred?' fav':''), starred?'Remove favorite':'Add favorite', ICON.star, 'fav'));
-    acts.appendChild(mkAct('', 'Edit', ICON.edit, 'edit'));
-    acts.appendChild(mkAct('', 'Copy', ICON.copy, 'copy'));
-    acts.appendChild(mkAct('del', 'Remove', ICON.del, 'del'));
+/* Appends the next chunk. Never touches the rows already there. */
+function growOnce(){
+  const total = state.shown.length;
+  if (state.cap >= total) return false;
+  const from = state.cap;
+  state.cap = Math.min(state.cap + CHUNK, total);
+  elList.appendChild(buildRows(from, state.cap));
+  paintTail();
+  return true;
+}
 
-    li.append(a, m, acts);
-    frag.appendChild(li);
-  });
-  elList.replaceChildren(frag);
+/* Keeps filling while the end of the list is still within reach of the
+   viewport. IntersectionObserver only fires on a CHANGE, so after appending, a
+   sentinel that is still in view would never fire again and the list would
+   stall with a gap — hence the bounded loop rather than waiting for a scroll.
+   The guard stops a short-row edge case from filling everything in one go. */
+function topUp(){
+  let guard = 0;
+  while (state.cap < state.shown.length && guard++ < 10){
+    const r = elSentinel.getBoundingClientRect();
+    if (r.top > window.innerHeight + GROW_MARGIN) break;
+    if (!growOnce()) break;
+  }
+}
 
-  elMore.hidden = total <= state.cap;
-  if (!elMore.hidden) elMore.textContent = 'SHOW ALL ' + nf.format(total) + ' RESULTS';
+function paintTail(){
+  const total = state.shown.length;
+  /* Abbr of the day earns its place on the idle view and nowhere else. While a
+     search or the stars filter is active it is 66 px of a phone's screen spent
+     on something the user did not ask about, so it steps aside. */
+  if (elWotd.dataset.has === '1') elWotd.hidden = !!state.q.trim() || state.favOnly;
+  const left = total - state.cap;
+  elMore.hidden = left <= 0;
+  if (left > 0) elMore.textContent = 'SHOW ' + nf.format(left) + ' MORE';
+  elSentinel.hidden = left <= 0;
 
-  const noneAtAll = entriesOf(state.cat).length === 0;
   elEmpty.hidden = total !== 0;
   if (total === 0){
-    elEmpty.textContent = state.favOnly && !q ? 'NO FAVORITES YET'
-                        : noneAtAll ? 'THIS CATEGORY IS EMPTY'
+    const q = state.q.trim();
+    elEmpty.textContent = !state.cat ? 'NO CATEGORIES — USE RESTORE DATABASE TO BRING BACK BD MIL'
+                        : state.favOnly && !q ? 'NO FAVORITES YET'
+                        : entriesOf(state.cat).length === 0 ? 'THIS CATEGORY IS EMPTY'
                         : 'NO ABBREVIATIONS FOUND';
   }
 
+  const fav = favOf(state.cat);
   elStat.replaceChildren();
   const bits = [
     ['ENTRIES', nf.format(entriesOf(state.cat).length)],
-    ['FAVORITES', nf.format(fav.size)],
+    ['STARS', nf.format(fav.size)],
     ['SHOWN', nf.format(total)]
   ];
   bits.forEach(([k,v]) => {
-    const s = document.createElement('span');
-    s.appendChild(document.createTextNode(k + ' '));
-    const b = document.createElement('b'); b.textContent = v; s.appendChild(b);
-    elStat.appendChild(s);
+    const sp = document.createElement('span');
+    sp.appendChild(document.createTextNode(k + ' '));
+    const b = document.createElement('b'); b.textContent = v; sp.appendChild(b);
+    elStat.appendChild(sp);
   });
   if (!storageOk){
-    const s = document.createElement('span');
-    s.style.color = 'var(--danger)'; s.textContent = 'NOT SAVED — STORAGE UNAVAILABLE';
-    elStat.appendChild(s);
+    const sp = document.createElement('span');
+    sp.style.color = 'var(--danger)'; sp.textContent = 'NOT SAVED — STORAGE UNAVAILABLE';
+    elStat.appendChild(sp);
   }
 }
+
 function mkAct(cls, title, svg, act){
   const b = document.createElement('button');
   if (cls) b.className = cls;
@@ -674,14 +855,15 @@ function wordOfTheDay(){
 }
 function paintWotd(){
   const raw = wordOfTheDay();
-  if (!raw){ elWotd.hidden = true; return; }
+  if (!raw){ elWotd.hidden = true; elWotd.dataset.has = '0'; return; }
+  elWotd.dataset.has = '1';
   const e = parseEntry(raw);
   elWotd.replaceChildren();
   const i = document.createElement('i'); i.textContent = 'ABBR OF THE DAY';
   const b = document.createElement('b'); b.textContent = e.a || e.m;
   const em = document.createElement('em'); em.textContent = e.a ? e.m : '';
   elWotd.append(i, b, em);
-  elWotd.hidden = false;
+  elWotd.hidden = !!state.q.trim() || state.favOnly;
 }
 
 /* ---------- mutations (same rules as DictionaryController) ------------------ */
@@ -702,6 +884,13 @@ async function openEntry(oldRaw){
     const raw = compose(abbr, mean);
     const list = state.db[state.cat] || (state.db[state.cat] = []);
     if (editing){
+      // The add branch has always refused a duplicate; the edit branch did not,
+      // so editing one of two near-identical rows to match the other produced
+      // two byte-identical rows — and delEntry's filter then removed BOTH on a
+      // prompt phrased for one.
+      if (raw !== oldRaw && list.includes(raw)){
+        $('e-warn').textContent = 'That abbreviation already exists.'; continue;
+      }
       const at = list.indexOf(oldRaw);
       if (at >= 0) list[at] = raw; else list.push(raw);
       const f = favOf(state.cat);
@@ -733,6 +922,8 @@ async function openCat(oldName){
       state.db[n] = state.db[oldName] || []; delete state.db[oldName];
       state.fav[n] = state.fav[oldName] || new Set(); delete state.fav[oldName];
       persistCats(); persist(n); persistFav(n); sdel('e.'+oldName); sdel('f.'+oldName);
+      // Restore is keyed on the seed's category; follow it when that is renamed.
+      if (seedTarget('BD MIL') === oldName) sset('seedcat', n);
       if (state.cat === oldName){ state.cat = n; sset('cat', n); }
       toast('Renamed to ' + n + '.', 'ok');
     } else {
@@ -751,8 +942,29 @@ async function delCat(){
   const n = state.cat;
   if (!n) return;
   const count = entriesOf(n).length;
+  // Not "this cannot be undone" — for the built-in set it plainly can, and saying
+  // otherwise trains people to distrust the warning that matters.
+  // seedHas(n, …), not the flat set: in a user-made category every row is the
+  // user's own, however familiar its text. Counting against the flat set made
+  // the "gone for good — export them first" number too SMALL, which is the
+  // dangerous direction, and for a copy of the built-in set it vanished.
+  let ownCount = 0;
+  entriesOf(n).forEach(e => { if (!seedHas(n, e)) ownCount++; });
+  const builtCount = count - ownCount;
+  const favCount = favOf(n).size;
+  const plural = (k, one, many) => nf.format(k) + ' ' + (k === 1 ? one : many);
   if (!await ask('DELETE CATEGORY',
-    'Delete "' + n + '" and all ' + nf.format(count) + ' of its entries? This cannot be undone.',
+    (count === 0
+      ? 'Delete the empty category "' + n + '"?'
+      : 'Delete "' + n + '" and ' + (count === 1 ? 'its 1 entry' : 'all ' + nf.format(count) + ' of its entries') + '?') + '\n\n' +
+    'This changes only your copy in this browser.\n' +
+    (builtCount > 0
+      ? plural(builtCount, 'built-in entry', 'built-in entries') + ' can be put back with RESTORE DATABASE.\n'
+      : '') +
+    (ownCount > 0
+      ? plural(ownCount, 'entry is', 'entries are') + ' not in the built-in set and will be gone for good — export first.\n'
+      : '') +
+    (favCount > 0 ? 'Your ' + plural(favCount, 'star', 'stars') + ' in this category ' + (favCount === 1 ? 'is' : 'are') + ' lost too.' : ''),
     'DELETE')) return;
   state.cats = state.cats.filter(c => c !== n);
   delete state.db[n]; delete state.fav[n];
@@ -761,6 +973,78 @@ async function delCat(){
   if (state.cat) sset('cat', state.cat); else sdel('cat');
   fillCats(elCat); refresh(); paintWotd();
   toast('Deleted ' + n + '.', 'ok');
+}
+
+/* ---------- restore the built-in set --------------------------------------- */
+
+/* Puts back every built-in BD MIL entry that is missing, and nothing else.
+   Purely additive: it never removes an entry the user typed, never clears a star,
+   and never reorders anything that is already there. The 2,651 entries live in
+   the page's own <script type="application/json">, so this works offline and
+   needs no network — which is what makes an accidental delete survivable. */
+async function restoreDatabase(){
+  let missingEntries = 0, missingCats = 0;
+  Object.keys(SEED).forEach(c => {
+    const t = seedTarget(c);
+    if (!state.cats.includes(t)) missingCats++;
+    const have = new Set(entriesOf(t));
+    // `have.add` as we go, so the count matches what the apply loop will add
+    // even if the seed ever ships the same literal twice.
+    SEED[c].forEach(e => { if (!have.has(e.r)){ have.add(e.r); missingEntries++; } });
+  });
+
+  if (!missingEntries && !missingCats){
+    toast('Nothing to restore — all ' + nf.format(SEED_RAW.size) + ' built-in entries are already here.', 'ok', 4000);
+    return;
+  }
+
+  const bits = [];
+  if (missingEntries) bits.push(nf.format(missingEntries) + (missingEntries === 1 ? ' entry' : ' entries'));
+  if (missingCats) bits.push(missingCats + (missingCats === 1 ? ' category' : ' categories'));
+  if (!await ask('RESTORE BUILT-IN DATABASE',
+    'Put back ' + bits.join(' and ') + ' from the built-in BD MIL set?\n\n' +
+    'Entries you added yourself are left alone, nothing already here is removed, and your stars are kept.\n' +
+    'A built-in you EDITED counts as missing, so the original comes back beside your version.',
+    'RESTORE', false)) return;
+
+  let added = 0, saved = true;
+  Object.keys(SEED).forEach(c => {
+    const t = seedTarget(c);
+    if (!state.cats.includes(t)) state.cats = state.cats.concat(t).sort();
+    if (!state.fav[t]) state.fav[t] = new Set();
+    const list = state.db[t] || (state.db[t] = []);
+    const have = new Set(list);
+    SEED[c].forEach(e => { if (!have.has(e.r)){ have.add(e.r); list.push(e.r); added++; } });
+    if (!persist(t)) saved = false;
+  });
+  if (!persistCats()) saved = false;
+
+  /* Land the user where the result is visible. Restoring into 'BD MIL' while
+     they are looking at their own category changed nothing on screen — same
+     list, same three counts, all of which read entriesOf(state.cat) — under a
+     toast claiming thousands of entries came back. And restored rows carry no
+     stars, so leaving the FAVORITES filter on showed 'NO FAVORITES YET' beside
+     that same toast. */
+  const home = seedTarget('BD MIL');
+  if (state.cats.includes(home) && state.cat !== home){ state.cat = home; sset('cat', home); }
+  if (!state.cats.includes(state.cat)){
+    state.cat = state.cats[0] || '';
+    if (state.cat) sset('cat', state.cat);
+  }
+  if (state.favOnly){
+    state.favOnly = false; $('m-fav').setAttribute('aria-pressed','false'); sset('favonly','0');
+  }
+  if (state.q){ state.q = ''; elQ.value = ''; elClear.classList.remove('on'); }
+  fillCats(elCat);
+  refresh();
+  paintLetters();
+  paintWotd();
+  if (saved){
+    toast('Restored ' + nf.format(added) + (added === 1 ? ' entry to ' : ' entries to ') + home + '.', 'ok', 4000);
+  } else {
+    toast('Restored ' + nf.format(added) + ' entries for this session, but they could NOT be saved — '
+        + 'browser storage is full. Export now; they will be gone when you reload.', 'err', 9000);
+  }
 }
 
 /* ---------- import: same line normalisation as bulkImport ------------------ */
@@ -780,13 +1064,33 @@ function normalise(line){
   if (line.startsWith(' - ') || line.endsWith(' - ')) return null;
   return line;
 }
+/* Dedup on the ORDER-BLIND identity, not the raw line. The dialog invites both
+   "ABBR - Meaning" and "Meaning - ABBR", and 2,648 of the 2,651 built-ins are
+   stored meaning-first — so an abbr-first list matched nothing and was imported
+   wholesale while the dialog promised "Duplicates are skipped". Both lines of
+   the dialog's OWN placeholder were in that category: pasting the example text
+   added two rows that render pixel-identical to the originals, because
+   parseEntry normalises which side is displayed as the abbreviation. */
 function bulkImport(cat, contents){
   const list = state.db[cat] || (state.db[cat] = []);
-  const present = new Set(list);
+  /* The key sorts the two sides rather than relying on parseEntry's
+     shorter-side rule, so it is order-blind even when both sides are the same
+     length — 'Pilot - GD(P)' is exactly that, five characters each side — and
+     with a length-based key its reverse read as a new row. */
+  const keyOf = (t) => {
+    const d = t.indexOf(' - ');
+    if (d === -1) return t.trim().toLowerCase();
+    const x = t.slice(0, d).trim().toLowerCase(), y = t.slice(d + 3).trim().toLowerCase();
+    return x < y ? x + '\u0000' + y : y + '\u0000' + x;
+  };
+  const present = new Set(list.map(keyOf));
   let added = 0;
   contents.split(/\r?\n/).forEach(rawLine => {
     const line = normalise(rawLine);
-    if (line && !present.has(line)){ present.add(line); list.push(line); added++; }
+    if (!line) return;
+    const k = keyOf(line);
+    if (present.has(k)) return;
+    present.add(k); list.push(line); added++;
   });
   persist(cat);
   return added;
@@ -954,6 +1258,11 @@ function setFavOnly(on){
 
 /* ---------- selection / keyboard ------------------------------------------- */
 function selectRow(i){
+  // Arrowing past the last rendered row pulls in the next chunk rather than
+  // stopping dead at an arbitrary boundary the user cannot see.
+  while (i >= elList.children.length && state.cap < state.shown.length) {
+    if (!growOnce()) break;
+  }
   const rows = elList.children;
   if (!rows.length) return;
   state.sel = Math.max(0, Math.min(i, rows.length - 1));
@@ -974,7 +1283,20 @@ function toggleFav(raw){
 
 async function delEntry(raw){
   const e = parseEntry(raw);
-  if (!await ask('REMOVE ABBREVIATION', 'Remove "' + (e.a || e.m) + '" from ' + state.cat + '?', 'REMOVE')) return;
+  // Per CATEGORY, not the flat set: restore only writes into the seed's own
+  // category, so a built-in text sitting in a user-made category is not
+  // recoverable and must not be described as if it were.
+  const builtIn = seedHas(state.cat, raw);
+  const starred = favOf(state.cat).has(raw);
+  if (!await ask('REMOVE ABBREVIATION',
+    // Abbreviation alone is ambiguous — 175 of the built-in abbreviations are
+    // used by more than one entry, so "Remove MA?" could be any of several rows.
+    'Remove "' + (e.a ? e.a + ' — ' + e.m : e.m) + '" from ' + state.cat + '?\n\n' +
+    'This changes only your copy in this browser — the published page and everyone else are unaffected.\n' +
+    (builtIn ? 'It is a built-in entry, so RESTORE DATABASE can put it back at any time.'
+             : 'This one is not in the built-in set, so nothing can bring it back. Export first if you might want it.') +
+    (starred ? '\nIts star goes with it and does not come back.' : ''),
+    'REMOVE')) return;
   state.db[state.cat] = entriesOf(state.cat).filter(x => x !== raw);
   if (favOf(state.cat).delete(raw)) persistFav(state.cat);
   persist(state.cat); refresh(); fillCats(elCat); paintWotd();
@@ -1005,6 +1327,16 @@ $('addentry').addEventListener('click', () => {
 $('import').addEventListener('click', doImport);
 $('export').addEventListener('click', doExport);
 $('quiz').addEventListener('click', startQuiz);
+
+/* The manage disclosure. Inline on a wide screen (the CSS hides the button
+   there), a collapsible block on a phone. Toggling a class on <body> keeps the
+   markup single-sourced — no duplicated set of buttons to drift apart. */
+$('tools-btn').addEventListener('click', () => {
+  const open = document.body.classList.toggle('tools-open');
+  $('tools-btn').setAttribute('aria-expanded', String(open));
+  if (open) $('tools').scrollIntoView({ block:'nearest' });
+});
+$('restore').addEventListener('click', restoreDatabase);
 $('help').addEventListener('click', () => {
   const total = state.cats.reduce((n,c) => n + entriesOf(c).length, 0);
   $('h-stat').textContent = nf.format(total) + ' entries across ' + state.cats.length +
@@ -1013,7 +1345,19 @@ $('help').addEventListener('click', () => {
 });
 $('z-close').addEventListener('click', () => $('d-quiz').close());
 $('z-again').addEventListener('click', startQuiz);
-elMore.addEventListener('click', () => { state.cap = Infinity; render(); });
+elMore.addEventListener('click', () => { growOnce(); topUp(); });
+
+/* Auto-growth as you scroll. rootMargin preloads the next chunk before the end
+   of the list is reached, so scrolling never visibly stops to wait. */
+if ('IntersectionObserver' in window){
+  new IntersectionObserver(
+    (es) => { if (es.some(e => e.isIntersecting)) topUp(); },
+    { rootMargin: GROW_MARGIN + 'px 0px' }
+  ).observe(elSentinel);
+} else {
+  // No observer: fall back to a cheap passive scroll check.
+  addEventListener('scroll', () => topUp(), { passive: true });
+}
 
 elList.addEventListener('click', async ev => {
   const li = ev.target.closest('li'); if (!li) return;
