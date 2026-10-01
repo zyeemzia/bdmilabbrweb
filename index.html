@@ -207,6 +207,11 @@ button{cursor:pointer}
 mark{background:var(--accent-soft); color:inherit; border-radius:3px; padding:0 1px}
 #more{margin:0 16px 40px; width:calc(100% - 32px)}
 #sentinel{height:1px}
+/* The topbar is sticky and ~122-133 px tall, and scrollIntoView knows nothing
+   about it — a row scrolled into view by the arrow keys or the letter strip
+   landed underneath it. scroll-margin-top is exactly the fix. */
+#list li{scroll-margin-top:150px}
+#tools{scroll-margin-top:150px}
 .empty{
   margin:36px 16px; text-align:center; color:var(--faint);
   font-family:var(--mono); font-size:12px; letter-spacing:.1em;
@@ -244,6 +249,27 @@ dialog::backdrop{background:rgba(0,0,0,.62)}
 .warn{font-size:12px; color:var(--danger); min-height:1.2em}
 
 /* ---------- quiz ---------- */
+#tx textarea{min-height:120px; resize:vertical; font-family:var(--mono); font-size:12.5px; line-height:1.5}
+#tx .txrow{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap}
+#tx .txacts{display:flex; gap:6px}
+#tx .txacts .btn{padding:5px 10px; font-size:11px}
+#tx .row .btn{flex:1 1 auto; justify-content:center}
+.sronly{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+.hintline{margin:0; font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; color:var(--faint); min-height:1.3em}
+@media (max-width:759px){
+  /* 16px is the iOS Safari zoom floor. #q was fixed earlier; every dialog field
+     has the same problem, and the text tool's textareas are the worst of them —
+     focusing one zoomed the page and the user had to pinch back out. */
+  .dlg-b input[type=text],.dlg-b textarea,.dlg-b select,#tx textarea{font-size:16px}
+  #tx textarea{min-height:104px}
+  #tx .row .btn{min-height:44px}
+  #tx .txacts .btn{padding:9px 12px; font-size:11px; min-height:40px}
+  .dlg-f .btn,.dlg-b select{min-height:44px}
+  /* 34px was declared but the strip is a flex row, so the buttons were being
+     shrunk to ~21px. flex:0 0 auto holds the declared size. */
+  .letters button{flex:0 0 auto}
+}
 #qz .opt{
   text-align:left; width:100%; background:var(--panel-alt); border:1px solid var(--border);
   border-radius:11px; padding:11px 13px; font-size:14px;
@@ -376,13 +402,18 @@ kbd{
     <button class="btn" id="addentry"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>ABBREVIATION</button>
     <button class="btn" id="import"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>IMPORT</button>
     <button class="btn" id="export"><svg viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M4 20h16"/></svg>EXPORT</button>
+    <button class="btn" id="text" title="Abbreviate or de-abbreviate a block of text"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/><path d="M17 14l3 3-3 3"/></svg>TEXT TOOL</button>
     <button class="btn" id="quiz"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>FLASHCARDS</button>
     <button class="btn" id="restore" title="Put back any built-in BD MIL entry that is missing — deleted, or replaced by an edit"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg>RESTORE DATABASE</button>
   </div>
   </div>
 </div>
 
-<ul id="list" aria-live="polite"></ul>
+<!-- NOT aria-live: with 60+ rows in the window, every keystroke made a screen
+     reader start re-reading the entire rendered list. The result COUNT is
+     announced instead, from the dedicated region below. -->
+<ul id="list"></ul>
+<p id="sr-count" class="sronly" role="status" aria-live="polite" aria-atomic="true"></p>
 <!-- Outside the <ul> on purpose: rows use content-visibility, and a sentinel
      inside a skipped subtree would never be observed. -->
 <div id="sentinel" aria-hidden="true" hidden></div>
@@ -445,6 +476,34 @@ kbd{
     <button class="btn primary" id="i-ok" value="ok">IMPORT</button>
   </div>
 </form></dialog>
+
+<dialog id="d-text"><div id="tx">
+  <div class="dlg-h">ABBREVIATE / DE-ABBREVIATE</div>
+  <div class="dlg-b">
+    <div class="txrow">
+      <label for="tx-in">YOUR TEXT</label>
+      <span class="txacts">
+        <button type="button" class="btn" id="tx-paste">PASTE</button>
+        <button type="button" class="btn" id="tx-clear">CLEAR</button>
+      </span>
+    </div>
+    <textarea id="tx-in" spellcheck="false" placeholder="Paste or type a paragraph, then choose a direction below."></textarea>
+    <div class="row">
+      <button type="button" class="btn primary" id="tx-abbr">ABBREVIATE &darr;</button>
+      <button type="button" class="btn primary" id="tx-deabbr">DE-ABBREVIATE &darr;</button>
+    </div>
+    <div class="txrow">
+      <label for="tx-out">RESULT</label>
+      <span class="txacts">
+        <button type="button" class="btn" id="tx-copy">COPY</button>
+        <button type="button" class="btn" id="tx-swap">USE AS INPUT</button>
+      </span>
+    </div>
+    <textarea id="tx-out" spellcheck="false" placeholder="The result appears here."></textarea>
+    <p class="hintline" id="tx-note" role="status" aria-live="polite"></p>
+  </div>
+  <div class="dlg-f"><button type="button" class="btn" id="tx-close">CLOSE</button></div>
+</div></dialog>
 
 <dialog id="d-quiz"><div id="qz">
   <div class="dlg-h">FLASHCARD QUIZ</div>
@@ -516,13 +575,25 @@ Object.keys(SEED).forEach(c => {
   SEED_BY_CAT[c] = new Set();
   SEED[c].forEach(e => { SEED_RAW.add(e.r); SEED_BY_CAT[c].add(e.r); });
 });
-const seedHas = (cat, raw) => !!SEED_BY_CAT[cat] && SEED_BY_CAT[cat].has(raw);
+/* Resolve a LIVE category name back to its seed key, so this keeps telling the
+   truth after the built-in category has been renamed. Without it, renaming
+   'BD MIL' made every delete prompt claim its built-in entries were "not in the
+   built-in set" and "gone for good" — the exact inverse, since restoreDatabase
+   follows the rename through seedTarget and can put them all back. */
+/* The live name of the category holding the built-ins. Held in a variable, not
+   read from storage on demand: seedHas() is called once per row by delCat, so a
+   localStorage read inside it meant 2,651 synchronous reads to answer one
+   dialog. load() seeds it; the rename branch updates it. */
+let _seedCat = 'BD MIL';
+const seedTarget = (c) => (c === 'BD MIL' ? _seedCat : c);
 
-/* The category holding the built-ins can be RENAMED, so the seed's key is not
-   always its current name. Without this, restore looked for 'BD MIL', found
-   nothing, and built a SECOND category with a complete 2,651-entry duplicate —
-   while the renamed one kept its gaps and could never be repaired again. */
-const seedTarget = (c) => (c === 'BD MIL' ? (sget('seedcat') || 'BD MIL') : c);
+function seedKeyOf(cat){
+  if (SEED_BY_CAT[cat]) return cat;
+  for (const k in SEED_BY_CAT) if (seedTarget(k) === cat) return k;
+  return null;
+}
+const seedHas = (cat, raw) => { const k = seedKeyOf(cat); return !!k && SEED_BY_CAT[k].has(raw); };
+
 const K = 'bdmilabbr.';
 /* Rows put into the DOM at a time. Rendering all 2,651 at once cost 45,285 DOM
    nodes, a 2-4 SECOND rebuild, and a 141 ms style recalculation on every theme
@@ -537,10 +608,23 @@ const GROW_MARGIN = 500;   // px past the viewport bottom at which to top up
 let storageOk = true;
 function sget(k){ try { return localStorage.getItem(K+k); } catch(_) { storageOk = false; return null; } }
 function sset(k,v){
-  try { localStorage.setItem(K+k, v); return true; }
+  try {
+    localStorage.setItem(K+k, v);
+    // Recover the flag. It used to latch false for the session, so one failed
+    // write left "NOT SAVED — STORAGE UNAVAILABLE" in the status bar forever,
+    // even after the user freed space and everything saved again.
+    storageOk = true;
+    return true;
+  }
   catch(e){
     storageOk = false;
-    toast(e && e.name === 'QuotaExceededError'
+    // Firefox reports a full store as NS_ERROR_DOM_QUOTA_REACHED, and older
+    // WebKit as code 22 — neither is named QuotaExceededError, so both were
+    // being described as "unavailable" when the real problem was "full".
+    const full = !!e && (e.name === 'QuotaExceededError'
+      || e.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+      || e.code === 22 || e.code === 1014);
+    toast(full
       ? 'Browser storage is full. This session still works, but changes will not be remembered.'
       : 'Browser storage is unavailable. Changes will not be remembered.', 'err', 6000);
     return false;
@@ -589,6 +673,7 @@ function load(){
   }
   state.cats.sort();
   state.cats.forEach(c => { state.fav[c] = new Set(jget('f.'+c, [])); });
+  _seedCat = sget('seedcat') || 'BD MIL';
   const last = sget('cat');
   state.cat = (last && state.cats.includes(last)) ? last : (state.cats.includes('BD MIL') ? 'BD MIL' : (state.cats[0] || ''));
   state.az = sget('mode') === 'az';
@@ -597,9 +682,22 @@ function load(){
 
 const entriesOf = c => state.db[c] || [];
 const favOf = c => state.fav[c] || (state.fav[c] = new Set());
-function persist(c){ return sset('e.'+c, JSON.stringify(entriesOf(c))); }
+/* Every entry write drops that category's text-tool plans. They were keyed on
+   `entriesOf(cat).length` alone, and an EDIT replaces a row in place — so the
+   count never moved and abbreviateText kept using the superseded dictionary for
+   the rest of the session. A delete followed by an add did the same. Invalidating
+   here covers every mutation path, because they all persist. */
+function persist(c){ dropPlans(c); return sset('e.'+c, JSON.stringify(entriesOf(c))); }
 function persistFav(c){ sset('f.'+c, JSON.stringify(Array.from(favOf(c)))); }
 function persistCats(){ return sset('cats', JSON.stringify(state.cats)); }
+
+/* Dart's `String.compareTo` orders by UTF-16 CODE UNIT. `localeCompare` orders by
+   locale collation — it files 'é' next to 'e', and the result depends on the
+   browser's locale — so the two disagree on every entry containing a non-ASCII
+   character and the idle A-Z list could come out in a different order from the
+   app. JS relational operators on strings compare code units, which is exactly
+   what Dart does, so this is an exact match rather than an approximation. */
+const cuCmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
 /* ---------- ranking (port of DictionaryController._relevance) -------------- */
 function relevance(lower, q){
@@ -612,6 +710,14 @@ function relevance(lower, q){
   if (e.a.startsWith(q)) return 40;
   return 10;
 }
+
+/* Identity of the current filter. When it has not changed, a re-render is a
+   repaint of the same row set, so the rendered window and the selected row are
+   kept: resetting them unconditionally collapsed 400 visible rows back to 60 and
+   let the browser clamp the scroll to the top every time a row was starred,
+   edited or deleted. */
+function filterSig(){ return state.cat + '\u0000' + state.q + '\u0000' + (state.az?1:0) + (state.favOnly?1:0); }
+let _lastSig = null;
 
 function runFilter(){
   const q = state.q.toLowerCase().trim();
@@ -630,16 +736,23 @@ function runFilter(){
       out = out.filter(entry => entry.toLowerCase().includes(q));
     }
     const score = new Map(out.map(r => [r, relevance(r.toLowerCase(), q)]));
-    out.sort((a,b) => (score.get(b) - score.get(a)) || a.toLowerCase().localeCompare(b.toLowerCase()));
+    out.sort((a,b) => (score.get(b) - score.get(a)) || cuCmp(a.toLowerCase(), b.toLowerCase()));
   } else {
     // Decorate-sort-undecorate: parse each entry once, not once per comparison.
     out = out.map(e => [parseEntry(e).m.toLowerCase(), e])
-             .sort((a,b) => a[0].localeCompare(b[0]))
+             .sort((a,b) => cuCmp(a[0], b[0]))
              .map(p => p[1]);
   }
   state.shown = out;
-  state.cap = CHUNK;
-  state.sel = -1;
+  const sig = filterSig();
+  if (sig === _lastSig){
+    state.cap = Math.min(Math.max(state.cap, CHUNK), state.shown.length);
+    if (state.sel >= state.shown.length) state.sel = state.shown.length - 1;
+  } else {
+    _lastSig = sig;
+    state.cap = CHUNK;
+    state.sel = -1;
+  }
 }
 
 /* ---------- dom refs ------------------------------------------------------- */
@@ -732,7 +845,11 @@ function rowNode(raw, idx, q, fav){
 
   const acts = document.createElement('span'); acts.className = 'acts';
   const starred = fav.has(raw);
-  acts.appendChild(mkAct('fav'+(starred?' fav':''), starred?'Remove favorite':'Add favorite', ICON.star, 'fav'));
+  /* `'fav' + (starred ? ' fav' : '')` ALWAYS contained 'fav', so
+     `.acts button.fav svg{fill:var(--accent)}` matched every row and every star
+     rendered already-filled. The class carries the STATE; the button is
+     identified by data-act, which mkAct sets from its last argument. */
+  acts.appendChild(mkAct(starred ? 'fav' : '', starred ? 'Remove favorite' : 'Add favorite', ICON.star, 'fav'));
   acts.appendChild(mkAct('', 'Edit', ICON.edit, 'edit'));
   acts.appendChild(mkAct('', 'Copy', ICON.copy, 'copy'));
   acts.appendChild(mkAct('del', 'Remove', ICON.del, 'del'));
@@ -789,9 +906,15 @@ function paintTail(){
      search or the stars filter is active it is 66 px of a phone's screen spent
      on something the user did not ask about, so it steps aside. */
   if (elWotd.dataset.has === '1') elWotd.hidden = !!state.q.trim() || state.favOnly;
+  const say = total === 1 ? '1 result' : nf.format(total) + ' results';
+  if ($('sr-count').textContent !== say) $('sr-count').textContent = say;
+
   const left = total - state.cap;
   elMore.hidden = left <= 0;
-  if (left > 0) elMore.textContent = 'SHOW ' + nf.format(left) + ' MORE';
+  // It appends ONE chunk, so it said "SHOW 2,591 MORE" and revealed 60.
+  if (left > 0) elMore.textContent = left <= CHUNK
+    ? 'SHOW THE LAST ' + nf.format(left)
+    : 'SHOW ' + CHUNK + ' MORE  (' + nf.format(left) + ' LEFT)';
   elSentinel.hidden = left <= 0;
 
   elEmpty.hidden = total !== 0;
@@ -921,15 +1044,24 @@ async function openCat(oldName){
       state.cats = state.cats.filter(c => c !== oldName).concat(n).sort();
       state.db[n] = state.db[oldName] || []; delete state.db[oldName];
       state.fav[n] = state.fav[oldName] || new Set(); delete state.fav[oldName];
-      persistCats(); persist(n); persistFav(n); sdel('e.'+oldName); sdel('f.'+oldName);
-      // Restore is keyed on the seed's category; follow it when that is renamed.
-      if (seedTarget('BD MIL') === oldName) sset('seedcat', n);
+      /* Write the new keys FIRST and only drop the old ones if that succeeded.
+         Deleting first meant a full or blocked store lost the category outright:
+         the old keys were gone and the new ones never landed. */
+      const movedEntries = persist(n);
+      persistFav(n);
+      persistCats();
+      if (movedEntries){ sdel('e.'+oldName); sdel('f.'+oldName); }
+      else toast('Renamed for this session only — browser storage refused the write, '
+               + 'so the old name will come back on reload.', 'err', 9000);
+      dropPlans(oldName);
+      // Restore and seedHas are keyed on the seed's category; follow the rename.
+      if (_seedCat === oldName){ _seedCat = n; sset('seedcat', n); }
       if (state.cat === oldName){ state.cat = n; sset('cat', n); }
       toast('Renamed to ' + n + '.', 'ok');
     } else {
       state.cats = state.cats.concat(n).sort();
       state.db[n] = []; state.fav[n] = new Set();
-      state.cat = n; state.q = ''; elQ.value = ''; elClear.classList.remove('on');
+      state.cat = n; clearQuery();
       persistCats(); persist(n); persistFav(n); sset('cat', n);
       toast('Category ' + n + ' created.', 'ok');
     }
@@ -973,6 +1105,199 @@ async function delCat(){
   if (state.cat) sset('cat', state.cat); else sdel('cat');
   fillCats(elCat); refresh(); paintWotd();
   toast('Deleted ' + n + '.', 'ok');
+}
+
+/* ---------- abbreviate / de-abbreviate ------------------------------------- */
+/* A transliteration of the app's translation_engine.dart. The matching rules are
+   its rules unchanged, so the same paragraph gives the same result in both.
+   Two deliberate differences, both invisible in the output:
+
+   1. No regex lookbehind. Dart uses `(?<=^|\W)word(?=\W|$)`; Safari only gained
+      lookbehind in 16.4, and one SyntaxError in this script would take the whole
+      page down on an older iPhone. `(^|\W)` captures the boundary and the
+      replacement puts it back. Safe here because only the LEADING boundary is
+      consumed — the trailing one stays a lookahead — so two matches separated by
+      a single character still both fire.
+   2. The variation table is built once per category and memoised. The app
+      rebuilds tens of thousands of variations on every tap. Order is preserved
+      exactly (entries by meaning length descending, then each entry's variations
+      by length descending), so the replacement sequence, and therefore the
+      output, is identical. */
+const reEsc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/* The word class here is EXACTLY what `\W` means to a JS regex —
+   [^A-Za-z0-9_] — because the matcher below anchors on `(^|\W)`…`(?=\W|$)`.
+   Keeping the two in step is what makes the token pre-check sound: a variation
+   can only match if its first word-token appears as a whole token in the text.
+   Non-ASCII letters (the data contains 'Attaché') are separators to both, so
+   they stay consistent. */
+const WORD_RE = /[a-z0-9_]+/g;
+const firstTok = (t) => { const m = /[A-Za-z0-9_]+/.exec(t); return m ? m[0].toLowerCase() : ''; };
+const tokensOf = (text) => new Set(text.toLowerCase().match(WORD_RE) || []);
+
+function normalisedDict(cat){
+  const out = [];
+  entriesOf(cat).forEach((entry) => {
+    const d = entry.indexOf(' - ');
+    if (d === -1) return;
+    const p1 = entry.slice(0, d).trim(), p2 = entry.slice(d + 3).trim();
+    if (!p1 || !p2) return;
+    out.push(p1.length <= p2.length ? { abbr: p1, meaning: p2 } : { abbr: p2, meaning: p1 });
+  });
+  return out;
+}
+
+/* Every spelling and morphological variation of one meaning, in the app's order. */
+function variationsOf(m){
+  const variations = new Set([m]);
+  if (!m.includes(' ')){
+    const lowerM = m.toLowerCase();
+    const base0 = new Set([m]);
+    if (lowerM.includes('ense')) base0.add(m.replace(/ense/gi, 'ence'));
+    if (lowerM.includes('ence')) base0.add(m.replace(/ence/gi, 'ense'));
+    if (lowerM.endsWith('or'))  base0.add(m.replace(/or$/i, 'our'));
+    if (lowerM.endsWith('our')) base0.add(m.replace(/our$/i, 'or'));
+    if (lowerM.includes('ize')) base0.add(m.replace(/ize/gi, 'ise'));
+    if (lowerM.includes('ise')) base0.add(m.replace(/ise/gi, 'ize'));
+    base0.forEach((base) => {
+      variations.add(base);
+      const lb = base.toLowerCase();
+      if (lb.endsWith('e')){
+        const t = base.slice(0, -1);
+        [t+'ion',t+'ation',t+'ing',t+'ive',t+'ative',t+'itive',t+'al',t+'ous',
+         base+'d',base+'s',base+'ly',base+'ment',base+'ments'].forEach(v=>variations.add(v));
+      } else if (lb.endsWith('y')){
+        const t = base.slice(0, -1);
+        [t+'ies',t+'ied',base+'ing',t+'ily',t+'ication'].forEach(v=>variations.add(v));
+      } else {
+        [base+'s',base+'es',base+'ed',base+'ing',base+'y',base+'ery',base+'ly',base+'ally',
+         base+'ment',base+'ments',base+'ive',base+'ative',base+'ation',base+'tion',base+'er',base+'ers',
+         base+'ance',base+'ence',base+'al',base+'ous'].forEach(v=>variations.add(v));
+        if (lb.endsWith('t')) [base+'ion',base+'or',base+'ive',base+'ing',base+'ory',base+'ted',base+'ting'].forEach(v=>variations.add(v));
+        if (lb.endsWith('p')) [base+'ping',base+'ped',base+'per',base+'pers'].forEach(v=>variations.add(v));
+        if (lb.endsWith('c')) [base+'ive',base+'ing',base+'ed',base+'tion'].forEach(v=>variations.add(v));
+        if (lb.endsWith('f')) [base.slice(0,-1)+'ves', base.slice(0,-1)+'ved'].forEach(v=>variations.add(v));
+      }
+    });
+  } else {
+    variations.add(m.endsWith('y') ? m.slice(0, -1) + 'ies' : m + 's');
+  }
+  return Array.from(variations).sort((a, b) => b.length - a.length);
+}
+
+/* Both tables below are memoised per category and rebuilt when that category's
+   entry count changes. Re-deriving them per tap was most of the cost. */
+const _abbrPlan = {};
+const _deabPlan = {};
+
+/* Called from persist(), so any entry write invalidates that category's tables.
+   A function declaration, so persist() — defined earlier in the file but only
+   ever invoked from an event handler — can reach it. */
+function dropPlans(cat){ delete _abbrPlan[cat]; delete _deabPlan[cat]; }
+
+/* De-abbreviation order: longest abbreviation first, so SITREP is consumed
+   before a shorter abbreviation could match inside it. */
+function deAbbreviatePlan(cat){
+  const n = entriesOf(cat).length;
+  const hit = _deabPlan[cat];
+  if (hit && hit.n === n) return hit.plan;
+  const plan = normalisedDict(cat)
+    .sort((a, b) => b.abbr.length - a.abbr.length)
+    .map((it) => ({
+      abbr: it.abbr,
+      al: it.abbr.toLowerCase(),
+      ft: firstTok(it.abbr),
+      ftp: firstTok(it.abbr + 's'),
+      clean: it.meaning.split(/[;,\/(]/)[0].trim(),
+      cs: it.abbr === it.abbr.toUpperCase() && /[A-Z]/.test(it.abbr),
+    }));
+  _deabPlan[cat] = { n: n, plan: plan };
+  return plan;
+}
+function abbreviatePlan(cat){
+  const n = entriesOf(cat).length;
+  const hit = _abbrPlan[cat];
+  if (hit && hit.n === n) return hit.plan;
+  const dict = normalisedDict(cat).sort((a, b) => b.meaning.length - a.meaning.length);
+  const plan = [];
+  dict.forEach((it) => {
+    // Phrase preservation: "Position, Course and Speed" must not shatter at the comma.
+    const raw = (it.meaning.includes(',') && it.meaning.toLowerCase().includes(' and '))
+      ? it.meaning.split(';').map(e => e.trim()).filter(Boolean)
+      : it.meaning.split(/[;,]/).map(e => e.trim()).filter(Boolean);
+    const expanded = new Set();
+    raw.forEach((m0) => {
+      const baseWord = m0.replace(/\(.*?\)/g, '').trim();
+      if (!baseWord) return;
+      if (baseWord.includes('/')){
+        if (!baseWord.includes(' ')) baseWord.split('/').forEach(e => expanded.add(e.trim()));
+        else expanded.add(baseWord.replace(/\//g, ' '));
+      } else expanded.add(baseWord);
+    });
+    expanded.forEach((m) => {
+      if (m.length < 3) return;
+      // ft and vl are precomputed once, not per run: the pre-check below is the
+      // hot path, executed ~20,000 times per invocation.
+      variationsOf(m).forEach(v => plan.push({ abbr: it.abbr, v: v, vl: v.toLowerCase(), ft: firstTok(v) }));
+    });
+  });
+  _abbrPlan[cat] = { n: n, plan: plan };
+  return plan;
+}
+
+function abbreviateText(text, cat){
+  if (!text.trim()) return text;
+  let lower = text.toLowerCase();
+  let toks = tokensOf(text);
+  abbreviatePlan(cat).forEach((it) => {
+    /* Two pre-checks, cheapest first. The token test is O(1); the substring test
+       it replaced was O(text length) and ran ~20,000 times, which is why a 7 KB
+       paste took 981 ms. `includes` is kept as the second gate because it is a
+       stricter filter for multi-word variations and now almost never runs. */
+    if (it.ft && !toks.has(it.ft)) return;
+    if (!lower.includes(it.vl)) return;
+    const re = new RegExp('(^|\\W)(' + reEsc(it.v) + ')(?=\\W|$)', 'gi');
+    let changed = false;
+    const src = text;
+    text = src.replace(re, (full, pre, word, offset) => {
+      changed = true;
+      const ws = offset + pre.length;
+      const atSentenceStart = ws === 0 || /(^|[.!?\n])\s*$/.test(src.slice(Math.max(0, ws - 3), ws));
+      let rep = it.abbr;
+      if (rep === rep.toUpperCase() && !rep.endsWith('S')
+          && word.toLowerCase().endsWith('s') && !word.toLowerCase().endsWith('ss')){
+        rep = rep + 's';
+      } else if (rep === rep.toLowerCase() && atSentenceStart && rep.length){
+        rep = rep[0].toUpperCase() + rep.slice(1);
+      }
+      return pre + rep;
+    });
+    if (changed){ lower = text.toLowerCase(); toks = tokensOf(text); }
+  });
+  return text;
+}
+
+function deAbbreviateText(text, cat){
+  if (!text.trim()) return text;
+  let lower = text.toLowerCase();
+  let toks = tokensOf(text);
+  deAbbreviatePlan(cat).forEach((it) => {
+    /* Both the singular and the plural regex are tried, and for a single-token
+       abbreviation the plural is a DIFFERENT token ('MA' vs 'MAs'), so the
+       pre-check has to admit either. The `cs` flag keeps an all-caps
+       abbreviation from expanding inside a lowercase word. */
+    if (it.ft && !toks.has(it.ft) && !toks.has(it.ftp)) return;
+    if (!lower.includes(it.al)) return;
+    const flags = it.cs ? 'g' : 'gi';
+    let changed = false;
+    text = text.replace(new RegExp('(^|\\W)(' + reEsc(it.abbr) + ')(?=\\W|$)(?!\\s*\\()', flags),
+      (full, pre, word) => { changed = true; return pre + word + ' (' + it.clean + ')'; });
+    const plural = it.clean.endsWith('y') ? it.clean.slice(0, -1) + 'ies' : it.clean + 's';
+    text = text.replace(new RegExp('(^|\\W)(' + reEsc(it.abbr + 's') + ')(?=\\W|$)(?!\\s*\\()', flags),
+      (full, pre, word) => { changed = true; return pre + word + ' (' + plural + ')'; });
+    if (changed){ lower = text.toLowerCase(); toks = tokensOf(text); }
+  });
+  return text;
 }
 
 /* ---------- restore the built-in set --------------------------------------- */
@@ -1034,7 +1359,7 @@ async function restoreDatabase(){
   if (state.favOnly){
     state.favOnly = false; $('m-fav').setAttribute('aria-pressed','false'); sset('favonly','0');
   }
-  if (state.q){ state.q = ''; elQ.value = ''; elClear.classList.remove('on'); }
+  if (state.q) clearQuery();
   fillCats(elCat);
   refresh();
   paintLetters();
@@ -1092,8 +1417,12 @@ function bulkImport(cat, contents){
     if (present.has(k)) return;
     present.add(k); list.push(line); added++;
   });
-  persist(cat);
-  return added;
+  // The write's result is part of the answer. Discarding it meant a full or
+  // blocked store produced a green "Success: N added" toast that OVERWROTE
+  // sset's own red warning (one shared #toast node), and the rows were gone on
+  // the next reload. restoreDatabase already reports this properly.
+  const saved = persist(cat);
+  return { added: added, saved: saved };
 }
 /* UTF-8 first, Windows-1252 as the fallback — the same order the app uses, so a
    legacy Bijoy/ANSI word list still imports instead of throwing. */
@@ -1121,12 +1450,16 @@ async function doImport(){
       catch(err){ $('i-warn').textContent = 'Could not read that file.'; continue; }
     }
     if (!contents.trim()){ $('i-warn').textContent = 'Choose a file or paste some lines.'; continue; }
-    const added = bulkImport(target, contents);
+    const r = bulkImport(target, contents);
+    const added = r.added;
     if (target === state.cat) refresh();
     fillCats(elCat); paintWotd();
-    toast(added ? 'Success: ' + nf.format(added) + ' added to ' + target + '.'
-                : 'Nothing added — every line was a duplicate or unparseable.',
-          added ? 'ok' : 'err', 4000);
+    toast(!r.saved
+            ? 'Added ' + nf.format(added) + ' for this session, but they could NOT be saved — '
+              + 'browser storage is full or blocked. Export now; they will be gone when you reload.'
+            : added ? 'Success: ' + nf.format(added) + ' added to ' + target + '.'
+                    : 'Nothing added — every line was a duplicate or unparseable.',
+          !r.saved ? 'err' : (added ? 'ok' : 'err'), !r.saved ? 9000 : 4000);
     return;
   }
 }
@@ -1134,7 +1467,7 @@ async function doImport(){
 function doExport(){
   const cat = state.cat;
   if (!cat) return;
-  const data = entriesOf(cat).slice().sort((a,b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  const data = entriesOf(cat).slice().sort((a,b) => cuCmp(a.toLowerCase(), b.toLowerCase()));
   const text = '--- BD MIL ABBR DATABASE ---\nCategory: ' + cat + '\nEntries: ' + data.length + '\n\n' + data.join('\n');
   try {
     const url = URL.createObjectURL(new Blob([text], { type:'text/plain;charset=utf-8' }));
@@ -1184,7 +1517,15 @@ function paintCard(){
   done.hidden = true;
   const card = deck[i];
   $('z-prompt').textContent = card.a;
-  const wrong = shuffled(pool.filter(p => p.m !== card.m)).slice(0,3);
+  /* Deduplicate by meaning. Filtering only against the answer let the same wrong
+     meaning appear twice — and in a small category the option list could collapse
+     to one entry, making the answer unmissable. */
+  const seenM = new Set([card.m]);
+  const wrong = [];
+  shuffled(pool).forEach((pp) => {
+    if (wrong.length >= 3 || seenM.has(pp.m)) return;
+    seenM.add(pp.m); wrong.push(pp);
+  });
   const choices = shuffled([card].concat(wrong));
   opts.replaceChildren();
   choices.forEach(c => {
@@ -1203,6 +1544,82 @@ function paintCard(){
     opts.appendChild(b);
   });
 }
+
+/* ---------- text tool ------------------------------------------------------ */
+const txIn = () => $('tx-in'), txOut = () => $('tx-out');
+function txNote(msg){ $('tx-note').textContent = msg || ''; }
+
+let txBusy = false;
+function runText(toAbbr){
+  if (txBusy) return;                       // a second tap must not queue a second run
+  const src = txIn().value;
+  if (!src.trim()){ txNote('Nothing to work on — paste or type some text first.'); txIn().focus(); return; }
+  if (!state.cat){ txNote('No category selected.'); return; }
+
+  const cold = toAbbr ? !_abbrPlan[state.cat] : !_deabPlan[state.cat];
+  /* Building the ~20,000-variation table takes a few hundred ms the first time for
+     a category. Paint the notice first, then yield, so the one unavoidable pause
+     is explained instead of looking like a dead button.
+
+     setTimeout, not requestAnimationFrame: rAF is paused in a backgrounded or
+     hidden tab, which would leave the button genuinely dead until the user came
+     back. A timer still fires. The cost is that the notice is not guaranteed to
+     paint first — acceptable, since the warm path is single-digit milliseconds. */
+  txBusy = true;
+  txNote(cold ? 'Preparing the dictionary…' : 'Working…');
+  setTimeout(() => {
+    try {
+      const t0 = performance.now();
+      const out = toAbbr ? abbreviateText(src, state.cat) : deAbbreviateText(src, state.cat);
+      txOut().value = out;
+      const ms = Math.round(performance.now() - t0);
+      txNote(out === src
+        ? 'No matches found in ' + state.cat + '.  ' + ms + ' ms'
+        : (toAbbr ? 'Abbreviated' : 'Expanded') + ' against ' + state.cat + '.  ' + ms + ' ms');
+    } catch(e){
+      txNote('Could not process that text: ' + e);
+    } finally {
+      txBusy = false;                        // in a finally, or one throw disables the tool
+    }
+  }, 0);
+}
+
+async function txPaste(){
+  try {
+    if (navigator.clipboard && navigator.clipboard.readText && window.isSecureContext){
+      const t = await navigator.clipboard.readText();
+      if (t){ txIn().value = t; txNote('Pasted ' + nf.format(t.length) + ' characters.'); return; }
+      txNote('The clipboard is empty.');
+      return;
+    }
+  } catch(_){}
+  // Firefox has no readText for pages, and a denied permission lands here too.
+  txIn().focus();
+  txNote('This browser will not let a page read the clipboard — press Ctrl+V (or ⌘V) in the box above.');
+}
+
+$('text').addEventListener('click', () => {
+  if (!state.cat){ toast('Create a category first.', 'err'); return; }
+  txNote('Using ' + state.cat + ' — ' + nf.format(entriesOf(state.cat).length) + ' entries.');
+  $('d-text').showModal();
+  txIn().focus();
+});
+$('tx-close').addEventListener('click', () => $('d-text').close());
+$('tx-abbr').addEventListener('click', () => runText(true));
+$('tx-deabbr').addEventListener('click', () => runText(false));
+$('tx-paste').addEventListener('click', txPaste);
+$('tx-clear').addEventListener('click', () => { txIn().value = ''; txOut().value = ''; txNote(''); txIn().focus(); });
+$('tx-copy').addEventListener('click', async () => {
+  const t = txOut().value;
+  if (!t){ txNote('Nothing to copy yet.'); return; }
+  txNote(await copy(t) ? 'Copied ' + nf.format(t.length) + ' characters.' : 'Copy failed — select the text and copy manually.');
+});
+$('tx-swap').addEventListener('click', () => {
+  const t = txOut().value;
+  if (!t){ txNote('Nothing to move up yet.'); return; }
+  txIn().value = t; txOut().value = '';
+  txNote('Result moved up. Run the other direction on it if you like.');
+});
 
 /* ---------- letter strip --------------------------------------------------- */
 function buildLetters(){
@@ -1242,6 +1659,18 @@ function setQuery(v, instant){
   if (instant) go(); else qTimer = setTimeout(go, 160);
 }
 
+/* Clearing the query by hand left state.q, the input, the clear button, the URL
+   hash and the A-Z chips to be reset by five separate call sites, and two of them
+   forgot the hash — so a cleared search came back on reload — while creating a
+   category left a letter chip lit with an empty box. One helper, used by all. */
+function clearQuery(){
+  state.q = '';
+  elQ.value = '';
+  elClear.classList.remove('on');
+  try { history.replaceState(null, '', ' '); } catch(_){}
+  paintLetters();
+}
+
 function setMode(az){
   state.az = az;
   $('m-smart').setAttribute('aria-pressed', String(!az));
@@ -1276,9 +1705,22 @@ function selectedRaw(){
 
 function toggleFav(raw){
   const f = favOf(state.cat);
-  if (!f.delete(raw)) f.add(raw);
+  let starred;
+  if (f.delete(raw)) starred = false; else { f.add(raw); starred = true; }
   persistFav(state.cat);
-  refresh();
+  /* With the stars filter off the row SET cannot have changed, so repaint the one
+     star rather than rebuilding the list. Even with the window now preserved, a
+     rebuild of 2,000 rows to flip one glyph is wasted work. */
+  if (state.favOnly){ refresh(); return; }
+  const li = Array.from(elList.children).find((x) => x.dataset.raw === raw);
+  if (!li){ refresh(); return; }
+  const b = li.querySelector('button[data-act="fav"]');
+  if (b){
+    b.classList.toggle('fav', starred);
+    const t = starred ? 'Remove favorite' : 'Add favorite';
+    b.title = t; b.setAttribute('aria-label', t);
+  }
+  paintTail();
 }
 
 async function delEntry(raw){
@@ -1314,7 +1756,7 @@ $('m-az').addEventListener('click', () => setMode(true));
 $('m-fav').addEventListener('click', () => setFavOnly(!state.favOnly));
 elCat.addEventListener('change', () => {
   state.cat = elCat.value; sset('cat', state.cat);
-  state.q = ''; elQ.value = ''; elClear.classList.remove('on');
+  clearQuery();
   refresh(); paintLetters();
 });
 $('addcat').addEventListener('click', () => openCat(null));
@@ -1389,8 +1831,11 @@ document.addEventListener('keydown', async ev => {
     if (elQ.value){ elQ.value = ''; elClear.classList.remove('on'); setQuery('', true); }
     elQ.blur(); return;
   }
-  if (ev.key === 'ArrowDown'){ ev.preventDefault(); selectRow(state.sel + 1); return; }
-  if (ev.key === 'ArrowUp'){ ev.preventDefault(); selectRow(state.sel <= 0 ? 0 : state.sel - 1); return; }
+  /* Not while a form control has focus: swallowing the arrows made the category
+     <select> impossible to change by keyboard, and a textarea impossible to
+     navigate. `typing` already covers INPUT / TEXTAREA / SELECT. */
+  if (ev.key === 'ArrowDown' && !typing){ ev.preventDefault(); selectRow(state.sel + 1); return; }
+  if (ev.key === 'ArrowUp' && !typing){ ev.preventDefault(); selectRow(state.sel <= 0 ? 0 : state.sel - 1); return; }
   const raw = selectedRaw();
   if (!raw) return;
   if (ev.key === 'Enter' && !typing){
@@ -1401,6 +1846,90 @@ document.addEventListener('keydown', async ev => {
     ev.preventDefault(); toggleFav(raw); selectRow(state.sel);
   }
 });
+
+/* ---------- cross-tab sync ------------------------------------------------- */
+/* Two tabs of this page share one localStorage, and every write replaces a whole
+   category key — so a star added in tab A was silently wiped the next time tab B
+   wrote from its own stale copy.
+
+   The `storage` event fires in every OTHER tab and never in the one that wrote,
+   so each tab re-reads just the key that changed. That removes the lost update in
+   every realistic case, because a tab is now stale only for the microseconds
+   between the other tab's write and the event being delivered.
+   What it does NOT do is serialise two writes issued in the same instant; the
+   last one still wins. Closing that properly needs per-operation replay against a
+   revision counter, which is a lot of machinery for a single-user reference page,
+   so it is deliberately out of scope — see the README.
+   
+   Deliberately NOT followed: `cat`, `mode` and `favonly`. They are persisted so a
+   new tab opens where you left off, but adopting another tab's live changes would
+   yank the filter out from under someone mid-read. `theme` IS followed, because it
+   is a deliberate appearance choice rather than a position in a list. */
+let _syncToastTimer = 0;
+function syncToast(msg){
+  clearTimeout(_syncToastTimer);
+  _syncToastTimer = setTimeout(() => toast(msg, 'ok', 3000), 250);  // coalesce a burst
+}
+
+function reloadCategory(cat){
+  state.db[cat] = jget('e.' + cat, []);
+  dropPlans(cat);
+}
+
+function syncFromStorage(ev){
+  // Only our own keys, and only localStorage (sessionStorage raises this too).
+  if (ev.storageArea && ev.storageArea !== localStorage) return;
+
+  // key === null means another tab called clear(). Rebuild from scratch.
+  if (ev.key === null){
+    state.cats = []; state.db = {}; state.fav = {};
+    load();
+    fillCats(elCat);
+    refresh(); paintLetters(); paintWotd();
+    syncToast('Another tab cleared the stored data.');
+    return;
+  }
+  if (ev.key.indexOf(K) !== 0) return;
+  const k = ev.key.slice(K.length);
+
+  if (k === 'cats'){
+    const next = jget('cats', null);
+    if (next === null) return;
+    state.cats = next.slice().sort();
+    // Pick up anything that tab created, and drop what it deleted.
+    state.cats.forEach((c) => { if (!state.db[c]) reloadCategory(c); if (!state.fav[c]) state.fav[c] = new Set(jget('f.' + c, [])); });
+    Object.keys(state.db).forEach((c) => { if (!state.cats.includes(c)){ delete state.db[c]; delete state.fav[c]; dropPlans(c); } });
+    if (!state.cats.includes(state.cat)){
+      state.cat = state.cats.includes(_seedCat) ? _seedCat : (state.cats[0] || '');
+      _lastSig = null;                     // the row set really did change
+    }
+    fillCats(elCat);
+    refresh(); paintWotd();
+    syncToast('Categories updated from another tab.');
+    return;
+  }
+
+  if (k.indexOf('e.') === 0){
+    const cat = k.slice(2);
+    if (!state.cats.includes(cat)) return;
+    reloadCategory(cat);
+    fillCats(elCat);
+    if (cat === state.cat){ refresh(); paintWotd(); }
+    syncToast('"' + cat + '" updated from another tab.');
+    return;
+  }
+
+  if (k.indexOf('f.') === 0){
+    const cat = k.slice(2);
+    state.fav[cat] = new Set(jget('f.' + cat, []));
+    if (cat === state.cat) refresh();
+    return;                                 // stars are quiet: no toast
+  }
+
+  if (k === 'seedcat'){ _seedCat = ev.newValue || 'BD MIL'; return; }
+  if (k === 'theme'){ document.documentElement.setAttribute('data-theme', ev.newValue || 'auto'); return; }
+}
+addEventListener('storage', syncFromStorage);
 
 /* ---------- theme ---------------------------------------------------------- */
 function applyTheme(t){
