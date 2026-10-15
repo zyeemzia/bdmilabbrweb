@@ -9,6 +9,23 @@
 <meta name="theme-color" content="#141A11" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#37474F" media="(prefers-color-scheme: light)">
 <meta name="author" content="ZyeemZia">
+<!-- Installable as an app. Every one of these degrades to nothing if the sidecar
+     file is absent, so the single-file copy still opens straight from disk. -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BD MIL ABBR">
+<meta name="application-name" content="BD MIL ABBR">
+<!-- A real PNG first: iOS does not reliably accept a data: URI for the home
+     screen icon. The inline SVG below stays as the fallback for the single-file
+     copy, where no PNG sits beside it. -->
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<!-- Tab icon. The PNG is the real artwork; the inline SVG below it is the
+     fallback for the single-file copy, where no PNG sits beside it. Browsers
+     differ on which they prefer when both are offered — delete the SVG line to
+     force the PNG everywhere. -->
+<link rel="icon" type="image/png" sizes="96x96" href="favicon.png">
 <!-- Link previews (WhatsApp, Telegram, Slack, Facebook, X). No og:image: an
      external file would break the single-file promise, and a data: URI is not
      fetched by any scraper. -->
@@ -346,6 +363,25 @@ kbd{
 @media (prefers-reduced-motion:reduce){
   .btn:active,.chip:active,.iconbtn:active,.acts button:active,.letters button:active{transform:none}
 }
+/* Installed, so there is no browser URL bar. The iOS status bar is translucent,
+   which means the header has to pay for the inset itself. */
+@media all and (display-mode: standalone){
+  .hud{padding-top:calc(10px + env(safe-area-inset-top))}
+  body{padding-bottom:calc(env(safe-area-inset-bottom) + 4px)}
+  #install{display:none}
+}
+.banner{
+  margin:10px 16px 0; padding:11px 13px; display:flex; gap:10px; align-items:flex-start;
+  background:var(--accent-soft); border:1px solid var(--border);
+  border-left:3px solid var(--accent); border-radius:0 12px 12px 0; font-size:12.5px; line-height:1.5;
+}
+.banner b{color:var(--accent)}
+.banner .x{
+  margin-left:auto; flex:none; background:transparent; border:0; color:var(--faint);
+  width:28px; height:28px; border-radius:7px; font-size:17px; line-height:1;
+}
+.banner .x:hover{color:var(--text); background:var(--panel-alt)}
+@media (max-width:759px){ .banner{margin:8px 12px 0} }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -371,6 +407,16 @@ kbd{
   <button id="clear" title="Clear (Esc)" aria-label="Clear search"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
 </div>
 </div>
+
+<!-- iOS offers no install prompt, so the only way to discover Add to Home Screen
+     is to be told. Shown once, on iOS Safari, when not already installed. -->
+<section class="banner" id="ios-hint" hidden>
+  <span><b>Install it.</b> Tap <b>Share</b> at the bottom of Safari, then
+  <b>Add to Home Screen</b>. It then opens full-screen and works with no signal &mdash;
+  and the real reason: Safari stops deleting your added entries and stars after a
+  week of not visiting.</span>
+  <button class="x" id="ios-hint-x" title="Dismiss" aria-label="Dismiss">&times;</button>
+</section>
 
 <section class="wotd" id="wotd" hidden></section>
 
@@ -405,6 +451,13 @@ kbd{
     <button class="btn" id="text" title="Abbreviate or de-abbreviate a block of text"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/><path d="M17 14l3 3-3 3"/></svg>TEXT TOOL</button>
     <button class="btn" id="quiz"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>FLASHCARDS</button>
     <button class="btn" id="restore" title="Put back any built-in BD MIL entry that is missing — deleted, or replaced by an edit"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg>RESTORE DATABASE</button>
+  </div>
+
+  <div class="row">
+    <button class="btn" id="backup" title="Download everything as one file"><svg viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 19h16"/></svg>BACKUP ALL</button>
+    <button class="btn" id="restore-backup" title="Read a backup file back in"><svg viewBox="0 0 24 24"><path d="M12 21V9M8 13l4-4 4 4"/><path d="M4 5h16"/></svg>RESTORE BACKUP</button>
+    <input type="file" id="backup-file" accept=".json,application/json" hidden>
+    <button class="btn primary" id="install" hidden><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 17h6"/></svg>INSTALL APP</button>
   </div>
   </div>
 </div>
@@ -687,8 +740,11 @@ const favOf = c => state.fav[c] || (state.fav[c] = new Set());
    count never moved and abbreviateText kept using the superseded dictionary for
    the rest of the session. A delete followed by an add did the same. Invalidating
    here covers every mutation path, because they all persist. */
-function persist(c){ dropPlans(c); return sset('e.'+c, JSON.stringify(entriesOf(c))); }
-function persistFav(c){ sset('f.'+c, JSON.stringify(Array.from(favOf(c)))); }
+/* askPersist() lives here rather than at boot: load()'s first-run seeding writes
+   through sset() directly, so these two are only ever reached by a real edit —
+   which is the right moment to ask the browser to keep this origin's data. */
+function persist(c){ askPersist(); dropPlans(c); return sset('e.'+c, JSON.stringify(entriesOf(c))); }
+function persistFav(c){ askPersist(); sset('f.'+c, JSON.stringify(Array.from(favOf(c)))); }
 function persistCats(){ return sset('cats', JSON.stringify(state.cats)); }
 
 /* Dart's `String.compareTo` orders by UTF-16 CODE UNIT. `localeCompare` orders by
@@ -1847,6 +1903,182 @@ document.addEventListener('keydown', async ev => {
   }
 });
 
+/* ---------- backup to a file ----------------------------------------------- */
+/* The honest insurance. localStorage is per-browser and per-device, and every
+   platform can clear it: "clear browsing data", a private window, Chrome's quota
+   eviction, and on iOS Safari a 7-day purge for sites that are not installed.
+   RESTORE DATABASE only brings back the 2,651 built-ins — the entries somebody
+   typed themselves exist nowhere else, so there has to be a way to get them off
+   the device. One file, plain JSON, readable in any text editor. */
+const BACKUP_V = 1;
+
+function buildBackup(){
+  const out = { app:'BD MIL ABBR', backupVersion:BACKUP_V, exportedAt:new Date().toISOString(),
+                seedCategory:_seedCat, categories:{}, settings:{} };
+  state.cats.forEach((c) => {
+    out.categories[c] = { entries: entriesOf(c).slice(), favorites: Array.from(favOf(c)) };
+  });
+  ['theme','mode','favonly','cat'].forEach((k) => { const v = sget(k); if (v !== null) out.settings[k] = v; });
+  return out;
+}
+
+function doBackup(){
+  try {
+    const text = JSON.stringify(buildBackup(), null, 1);
+    const d = new Date();
+    const stamp = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const url = URL.createObjectURL(new Blob([text], { type:'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = 'bdmilabbr-backup-' + stamp + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    const n = state.cats.reduce((t,c) => t + entriesOf(c).length, 0);
+    toast('Backed up ' + nf.format(n) + ' entries across ' + state.cats.length
+          + (state.cats.length === 1 ? ' category.' : ' categories.'), 'ok', 4000);
+  } catch(e){ toast('Backup failed: ' + e, 'err', 6000); }
+}
+
+/* Merge, never replace. A backup is almost always restored into an empty or
+   damaged store, where merging gives the same result as replacing — and when it
+   is not, additive is the one behaviour that cannot destroy what is already
+   there. Anything the user wants gone, they can delete afterwards. */
+async function applyBackup(text){
+  let b;
+  try { b = JSON.parse(text); } catch(_){ toast('That is not a readable backup file.', 'err', 5000); return; }
+  if (!b || typeof b !== 'object' || !b.categories || typeof b.categories !== 'object'){
+    toast('That file is not a BD MIL ABBR backup.', 'err', 5000); return;
+  }
+  let newCats = 0, newEntries = 0, newStars = 0;
+  Object.keys(b.categories).forEach((c) => {
+    const src = b.categories[c] || {};
+    const ents = Array.isArray(src.entries) ? src.entries.filter((x) => typeof x === 'string') : [];
+    const favs = Array.isArray(src.favorites) ? src.favorites.filter((x) => typeof x === 'string') : [];
+    if (!state.cats.includes(c)){ state.cats = state.cats.concat(c).sort(); newCats++; }
+    if (!state.fav[c]) state.fav[c] = new Set();
+    const list = state.db[c] || (state.db[c] = []);
+    const have = new Set(list);
+    ents.forEach((e) => { if (!have.has(e)){ have.add(e); list.push(e); newEntries++; } });
+    const f = state.fav[c];
+    favs.forEach((e) => { if (!f.has(e)){ f.add(e); newStars++; } });
+  });
+  if (!newCats && !newEntries && !newStars){
+    toast('Nothing new in that backup — everything in it is already here.', 'ok', 5000); return;
+  }
+  if (!await ask('RESTORE FROM BACKUP',
+    'Add ' + nf.format(newEntries) + (newEntries === 1 ? ' entry' : ' entries') + ', '
+      + nf.format(newStars) + (newStars === 1 ? ' star' : ' stars') + ' and '
+      + newCats + (newCats === 1 ? ' category' : ' categories') + ' from this file?\n\n'
+      + 'Nothing already here is removed or overwritten — a restore only adds.',
+    'RESTORE', false)) return;
+
+  let saved = true;
+  state.cats.forEach((c) => { if (!persist(c)) saved = false; persistFav(c); });
+  if (!persistCats()) saved = false;
+  if (!state.cats.includes(state.cat)) state.cat = state.cats[0] || '';
+  _lastSig = null;
+  fillCats(elCat); refresh(); paintLetters(); paintWotd();
+  toast(saved
+    ? 'Restored ' + nf.format(newEntries) + ' entries and ' + nf.format(newStars) + ' stars.'
+    : 'Restored for this session, but it could NOT be saved — storage is full or blocked.',
+    saved ? 'ok' : 'err', saved ? 4000 : 9000);
+}
+
+$('backup').addEventListener('click', doBackup);
+$('restore-backup').addEventListener('click', () => $('backup-file').click());
+$('backup-file').addEventListener('change', async (ev) => {
+  const f = ev.target.files && ev.target.files[0];
+  ev.target.value = '';                       // so the same file can be picked twice
+  if (!f) return;
+  try { await applyBackup(await f.text()); }
+  catch(e){ toast('Could not read that file: ' + e, 'err', 6000); }
+});
+
+/* ---------- installable app ------------------------------------------------ */
+/* The service worker is what makes the page installable; it is NOT what makes it
+   work offline, since the whole app is already in this one file. Registered only
+   from a secure origin — on file:// there is no worker and nothing to register,
+   which is exactly how the single-file copy stays single-file. */
+const standalone = () =>
+  (matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+
+/* Escape hatch. A registered service worker outlives the file that registered it,
+   so deleting sw.js from the server does NOT remove it from a visitor's browser.
+   Opening the page with ?nosw=1 unregisters every worker on this scope and drops
+   its caches, which is the one-step recovery if a release ever ships a worker that
+   misbehaves. Worth having precisely because a worker is the one part of this app
+   that can outlast a bad deploy. */
+async function nukeServiceWorker(){
+  try {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map((r) => r.unregister()));
+    const names = await caches.keys();
+    await Promise.all(names.map((n) => caches.delete(n)));
+    toast('Service worker removed and caches cleared. Reload to continue without it.', 'ok', 9000);
+  } catch(e){ toast('Could not remove the service worker: ' + e, 'err', 8000); }
+}
+
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost'
+    || location.hostname === '127.0.0.1')){
+  let noSw = false;
+  try { noSw = new URLSearchParams(location.search).get('nosw') === '1'; } catch(_){}
+  if (noSw) nukeServiceWorker();
+  else addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});   // absent on the single-file copy
+  });
+  navigator.serviceWorker.addEventListener('message', (ev) => {
+    if (!ev.data || ev.data.type !== 'sw-update') return;
+    // The worker found a newer index.html. Offer it rather than reloading under
+    // the user's hands — they may be mid-edit in a dialog.
+    toast('A new version is ready. Reload to use it.', 'ok', 12000);
+  });
+}
+
+let _installPrompt = null;
+/* Visibility is DERIVED from whether we actually hold a prompt, not toggled by
+   hand in three places. The same mistake as the favourite star: when the class or
+   attribute is set imperatively, some other path eventually disagrees with the
+   state, and you get a button that offers something it cannot do. */
+function paintInstall(){ $('install').hidden = !_installPrompt || standalone(); }
+
+addEventListener('beforeinstallprompt', (ev) => {
+  ev.preventDefault();                        // our own button, not Chrome's mini-infobar
+  _installPrompt = ev;
+  paintInstall();
+});
+$('install').addEventListener('click', async () => {
+  if (!_installPrompt) { paintInstall(); return; }
+  try { await _installPrompt.prompt(); } catch(_){}
+  _installPrompt = null;                      // a prompt can only be used once
+  paintInstall();
+});
+addEventListener('appinstalled', () => { _installPrompt = null; paintInstall(); sset('installed','1'); });
+
+/* iOS has no beforeinstallprompt and no install UI of its own, so the hint is
+   the only discovery path. Once, then never again. */
+function maybeIosHint(){
+  const ua = navigator.userAgent || '';
+  const iOS = /iP(hone|od|ad)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const webkit = /WebKit/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+  if (!iOS || !webkit || standalone() || sget('iosHint') === 'done') return;
+  $('ios-hint').hidden = false;
+}
+$('ios-hint-x').addEventListener('click', () => { $('ios-hint').hidden = true; sset('iosHint','done'); });
+
+/* Ask the browser to keep this origin's storage. Chrome grants it silently once
+   the site is installed or used enough; Safari grants it on Add to Home Screen;
+   Firefox asks. Requested on the first WRITE rather than on load, so nobody is
+   prompted before they have anything worth keeping. */
+let _persistAsked = false;
+async function askPersist(){
+  if (_persistAsked) return;
+  _persistAsked = true;
+  try {
+    if (!navigator.storage || !navigator.storage.persist) return;
+    if (await navigator.storage.persisted()) return;
+    await navigator.storage.persist();
+  } catch(_){}
+}
+
 /* ---------- cross-tab sync ------------------------------------------------- */
 /* Two tabs of this page share one localStorage, and every write replaces a whole
    category key — so a star added in tab A was silently wiped the next time tab B
@@ -1955,8 +2187,20 @@ try {
   const m = /(?:^|[#&])q=([^&]*)/.exec(location.hash);
   if (m){ const v = decodeURIComponent(m[1]); elQ.value = v; elClear.classList.toggle('on', !!v); state.q = v; }
 } catch(_){}
+/* The manifest's app shortcuts (long-press the installed icon on Android) land
+   here. Kept to the two that are worth a shortcut; an unknown value is ignored. */
+try {
+  const sp = new URLSearchParams(location.search);
+  if (sp.get('mode') === 'az') setMode(true);
+  if (sp.get('open') === 'text' && state.cat) {
+    txNote('Using ' + state.cat + ' — ' + nf.format(entriesOf(state.cat).length) + ' entries.');
+    $('d-text').showModal();
+  }
+} catch(_){}
 refresh();
 paintLetters();
+maybeIosHint();
+paintInstall();
 if (!storageOk) toast('Browser storage is unavailable — this session works, but changes will not be remembered.', 'err', 6000);
 </script>
 </body>
