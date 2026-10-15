@@ -226,14 +226,20 @@ mark{background:var(--accent-soft); color:inherit; border-radius:3px; padding:0 
    LINKS, not subresources — nothing is fetched until someone clicks — so the
    page still loads with no network at all. */
 .sitelinks{display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin:0}
+/* --sans, not --mono: the mono face is for abbreviations and chrome labels, and
+   a typewriter URL sitting under a page of sans body text read as a different
+   product. Letter-spacing goes with it — the tracking that opens up small caps
+   mono only smears a lowercase sans string. */
 .sitelinks a{
-  color:var(--accent); text-decoration:none; font-family:var(--mono);
-  font-size:11.5px; letter-spacing:.04em; border-bottom:1px solid transparent; padding:2px 0;
+  color:var(--accent); text-decoration:none; font-family:var(--sans);
+  font-size:13.5px; letter-spacing:0; border-bottom:1px solid transparent; padding:2px 0;
 }
 .sitelinks a:hover{border-bottom-color:var(--accent)}
+/* No text-transform: the mark is "Copyright © ZyeemZia" and must render with
+   exactly that casing, so the styling cannot be allowed to rewrite it. */
 .copyline{
-  margin:0; font-family:var(--mono); font-size:10.5px; letter-spacing:.12em;
-  color:var(--faint); text-transform:uppercase;
+  margin:0; font-family:var(--sans); font-size:12px; letter-spacing:0;
+  color:var(--faint);
 }
 #foot{
   margin:26px 16px calc(28px + env(safe-area-inset-bottom));
@@ -246,7 +252,7 @@ mark{background:var(--accent-soft); color:inherit; border-radius:3px; padding:0 
   #foot .sitelinks{gap:14px}
   /* 40 px minimum, the same floor as every other control on a phone. The
      padding does the work so the underline still hugs the text. */
-  .sitelinks a{font-size:12.5px; padding:11px 0}
+  .sitelinks a{font-size:14px; padding:11px 0}
 }
 /* The topbar is sticky and ~122-133 px tall, and scrollIntoView knows nothing
    about it — a row scrolled into view by the arrow keys or the letter strip
