@@ -65,14 +65,30 @@ the SVG covers the single file. Do not reorder those `<link rel="icon">` lines.
 
 ## Install it
 
-**Android / Chrome / Edge / desktop** — an **INSTALL APP** button appears in the
-tools row when the browser offers it, or use the browser menu's "Install app".
+The button in the tools row changes with the platform, because the three
+platforms do genuinely different things:
 
-**iPhone / iPad — there is no INSTALL APP button, in any browser.** That button is
-driven by `beforeinstallprompt`, which no iOS browser implements: every browser on
-iOS is WebKit underneath, so Chrome, Edge and Firefox there behave like Safari and
-fire nothing. It is a platform limit, not a missing feature. The page therefore
-shows a one-time hint instead: **Share → Add to Home Screen**.
+| platform | button | what tapping it does |
+|---|---|---|
+| Android | **INSTALL APP** | the browser's real install prompt |
+| Windows | **INSTALL ON WINDOWS** | the browser's real install prompt |
+| other desktop | **INSTALL APP** | the browser's real install prompt |
+| iPhone / iPad | **ADD TO HOME SCREEN** | a dialog with the Share steps |
+
+On Android, Windows and desktop the button only appears once the browser has
+decided the site is installable (it fires `beforeinstallprompt`); until then
+there is nothing to install and the button stays hidden. The browser menu's own
+"Install app" item works too.
+
+**iPhone / iPad** — the button is always shown (there is nothing to wait for),
+but it cannot install anything by itself: it opens a dialog with the **Share →
+Add to Home Screen** steps, naming the exact control for that browser — the
+Share icon in Safari's bottom bar, or the ⋯ overflow menu in Chrome, Edge and
+Firefox, which have no share icon on screen at all. No page on iOS can do better. The browser event that drives a real
+install button, `beforeinstallprompt`, is not implemented by any iOS browser —
+every browser on iOS is WebKit underneath, so Chrome, Edge and Firefox there
+behave exactly like Safari and fire nothing. It is a platform limit, not a missing
+feature. A one-time banner says the same thing; tapping the button dismisses it.
 
 The hint appears in Safari at any version, and in Chrome / Edge / Firefox / Opera
 on **iOS 16.4 or newer** — the release where third-party iOS browsers were first

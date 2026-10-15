@@ -490,7 +490,7 @@ kbd{
     <button class="btn" id="backup" title="Download everything as one file"><svg viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 19h16"/></svg>BACKUP ALL</button>
     <button class="btn" id="restore-backup" title="Read a backup file back in"><svg viewBox="0 0 24 24"><path d="M12 21V9M8 13l4-4 4 4"/><path d="M4 5h16"/></svg>RESTORE BACKUP</button>
     <input type="file" id="backup-file" accept=".json,application/json" hidden>
-    <button class="btn primary" id="install" hidden><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 17h6"/></svg>INSTALL APP</button>
+    <button class="btn primary" id="install" hidden><span id="install-ico"></span><span id="install-t">INSTALL APP</span></button>
   </div>
   </div>
 </div>
@@ -547,7 +547,7 @@ kbd{
   <div class="dlg-h" id="a-title">CONFIRM</div>
   <div class="dlg-b"><p id="a-body"></p></div>
   <div class="dlg-f">
-    <button class="btn" value="cancel">CANCEL</button>
+    <button class="btn" id="a-cancel" value="cancel">CANCEL</button>
     <button class="btn primary danger" id="a-ok" value="ok">CONFIRM</button>
   </div>
 </form></dialog>
@@ -937,7 +937,20 @@ async function ask(title, body, okLabel, destructive){
   $('a-body').textContent = body;
   $('a-ok').textContent = okLabel || 'CONFIRM';
   $('a-ok').className = 'btn primary' + (destructive === false ? '' : ' danger');
+  $('a-cancel').hidden = false;
   return (await dlg($('d-ask'))) === 'ok';
+}
+
+/* Same dialog, one button. For telling rather than asking — a CANCEL on a
+   message with nothing to cancel just makes the reader hesitate. */
+async function tell(title, body, okLabel){
+  $('a-title').textContent = title;
+  $('a-body').textContent = body;
+  $('a-ok').textContent = okLabel || 'GOT IT';
+  $('a-ok').className = 'btn primary';
+  $('a-cancel').hidden = true;
+  await dlg($('d-ask'));
+  $('a-cancel').hidden = false;
 }
 
 /* Only the two glyphs a row actually draws. Edit, copy and delete moved into the
@@ -2139,7 +2152,61 @@ let _installPrompt = null;
    hand in three places. The same mistake as the favourite star: when the class or
    attribute is set imperatively, some other path eventually disagrees with the
    state, and you get a button that offers something it cannot do. */
-function paintInstall(){ $('install').hidden = !_installPrompt || standalone(); }
+/* The button used to be shown only where beforeinstallprompt had fired, which
+   meant iOS — the one platform with no install UI of its own and therefore the
+   one that most needs telling — showed nothing at all. It is shown there too
+   now; tapping it explains Share → Add to Home Screen, since no page on iOS can
+   raise the install sheet itself. Still hidden once installed, where there is
+   nothing left to do. */
+/* Where Share actually is, per browser. "Open the Share menu" was true and
+   useless: in Chrome and Edge on iOS there is no share icon on screen at all,
+   it is buried in the overflow menu, which is precisely why people cannot find
+   it. Each string names the control and where it sits. */
+function installSteps(app){
+  if (app === 'chrome')  return 'Tap the \u22EF button in the bottom-right corner, choose "Share\u2026", then scroll down and tap "Add to Home Screen".';
+  if (app === 'edge')    return 'Tap the \u22EF button in the bottom bar, choose "Share", then scroll down and tap "Add to Home Screen".';
+  if (app === 'firefox') return 'Tap the \u22EF button in the bottom-right corner, then tap "Share", then scroll down and tap "Add to Home Screen".';
+  if (app === 'opera')   return 'Open the browser menu, choose "Share", then scroll down and tap "Add to Home Screen".';
+  return 'Tap the Share button \u2014 the square with an arrow pointing up, in the bar at the bottom of Safari \u2014 then scroll down and tap "Add to Home Screen".';
+}
+
+/* Three different installs behind one control, because the three platforms do
+   genuinely different things and a single "INSTALL APP" label was lying on two
+   of them. Android and Windows get the browser's real install prompt; iOS has
+   no such prompt at all and gets the Add to Home Screen steps instead. The icon
+   changes with the label so the button looks like what it does. */
+const INSTALL_ICON = {
+  phone:   '<svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M10.5 18.5h3"/></svg>',
+  desktop: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>',
+  share:   '<svg viewBox="0 0 24 24"><path d="M12 15V3M8.5 6.5L12 3l3.5 3.5"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>'
+};
+
+function platformKind(){
+  if (iosInfo().iOS) return 'ios';
+  const ua = navigator.userAgent || '';
+  if (/Android/.test(ua)) return 'android';
+  if (/Windows NT/.test(ua)) return 'windows';
+  return 'desktop';
+}
+
+const INSTALL_FACE = {
+  ios:     { t: 'ADD TO HOME SCREEN', i: 'share'   },
+  android: { t: 'INSTALL APP',        i: 'phone'   },
+  windows: { t: 'INSTALL ON WINDOWS', i: 'desktop' },
+  desktop: { t: 'INSTALL APP',        i: 'desktop' }
+};
+
+function iosInstallable(){
+  const { iOS, ver, app } = iosInfo();
+  return iOS && !standalone() && (app === 'safari' || ver >= 16.04);
+}
+function paintInstall(){
+  const kind = platformKind();
+  const face = INSTALL_FACE[kind] || INSTALL_FACE.desktop;
+  $('install-t').textContent = face.t;
+  $('install-ico').innerHTML = INSTALL_ICON[face.i];   // constant markup, never user text
+  $('install').hidden = standalone() || (!_installPrompt && !iosInstallable());
+}
 
 addEventListener('beforeinstallprompt', (ev) => {
   ev.preventDefault();                        // our own button, not Chrome's mini-infobar
@@ -2147,7 +2214,19 @@ addEventListener('beforeinstallprompt', (ev) => {
   paintInstall();
 });
 $('install').addEventListener('click', async () => {
-  if (!_installPrompt) { paintInstall(); return; }
+  if (!_installPrompt){
+    if (iosInstallable()){
+      await tell('ADD TO HOME SCREEN',
+        installSteps(iosInfo().app) + '\n\n'
+        + 'iOS gives no app the ability to do this for you, so this is the only way.\n\n'
+        + 'It is worth doing: installed, it opens full-screen, works with no signal, '
+        + 'and iOS stops deleting the entries and stars you add after a week away.');
+      sset('iosHint', 'done');               // they have been told; no banner later
+      $('ios-hint').hidden = true;
+      return;
+    }
+    paintInstall(); return;
+  }
   try { await _installPrompt.prompt(); } catch(_){}
   _installPrompt = null;                      // a prompt can only be used once
   paintInstall();
@@ -2183,12 +2262,10 @@ function maybeIosHint(){
   // Third-party iOS browsers only gained Add to Home Screen in 16.4. Where the
   // UA carries no version at all, trust Safari and stay quiet elsewhere.
   if (app !== 'safari' && !(ver >= 16.04)) return;
-  const where = app === 'safari'
-    ? 'Tap <b>Share</b> at the bottom of Safari'
-    : 'Open the <b>Share</b> menu';
+  const esc = (t) => t.replace(/[&<>]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
   $('ios-hint-t').innerHTML =
-    '<b>Install it.</b> ' + where + ', then <b>Add to Home Screen</b>. '
-    + 'It then opens full-screen and works with no signal &mdash; and the real reason: '
+    '<b>Install it.</b> ' + esc(installSteps(app))
+    + ' It then opens full-screen and works with no signal &mdash; and the real reason: '
     + 'iOS stops deleting your added entries and stars after a week of not visiting.';
   $('ios-hint').hidden = false;
 }
