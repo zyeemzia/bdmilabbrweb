@@ -13,7 +13,7 @@
  * document on every navigation means a release needs no edit here at all — and if
  * someone does forget to bump CACHE, nothing breaks.
  */
-const CACHE = 'bdmilabbr-v1';
+const CACHE = 'bdmilabbr-v2';
 const SHELL = [
   './',
   './index.html',
@@ -22,6 +22,8 @@ const SHELL = [
   './icon-512.png',
   './icon-maskable-512.png',
   './apple-touch-icon.png',
+  './favicon.ico',
+  './favicon.png',
   './404.html'
 ];
 

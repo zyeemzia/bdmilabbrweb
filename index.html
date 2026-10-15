@@ -17,15 +17,17 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="BD MIL ABBR">
 <meta name="application-name" content="BD MIL ABBR">
-<!-- A real PNG first: iOS does not reliably accept a data: URI for the home
-     screen icon. The inline SVG below stays as the fallback for the single-file
-     copy, where no PNG sits beside it. -->
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-<!-- Tab icon. The PNG is the real artwork; the inline SVG below it is the
-     fallback for the single-file copy, where no PNG sits beside it. Browsers
-     differ on which they prefer when both are offered — delete the SVG line to
-     force the PNG everywhere. -->
+<!-- Tab and home-screen icon — the app icon artwork, same as the installed
+     app. ORDER MATTERS: when several equally suitable icons are offered,
+     browsers take the LAST one, and Chrome falls back to an earlier link if a
+     later file 404s. So the inline SVG placeholder goes FIRST (it is all the
+     single-file copy has, with no PNGs beside it) and the real artwork goes
+     after it, where it wins on the hosted site. Do not reorder these. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23141A11'/%3E%3Cpath d='M20 46 L32 16 L44 46' fill='none' stroke='%23FFD740' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M25 37 h14' stroke='%23FFD740' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23141A11'/%3E%3Cpath d='M20 46 L32 16 L44 46' fill='none' stroke='%23FFD740' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M25 37 h14' stroke='%23FFD740' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" type="image/x-icon" sizes="16x16 32x32 48x48" href="favicon.ico">
 <link rel="icon" type="image/png" sizes="96x96" href="favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <!-- Link previews (WhatsApp, Telegram, Slack, Facebook, X). No og:image: an
      external file would break the single-file promise, and a data: URI is not
      fetched by any scraper. -->
@@ -34,11 +36,6 @@
 <meta property="og:description" content="Bangladesh military abbreviation database — 2,651 entries. Works offline.">
 <meta property="og:site_name" content="BD MIL ABBR">
 <meta name="twitter:card" content="summary">
-<!-- Favicon as an inline SVG data URI, so the page still asks the network for
-     nothing. Without it every visit takes a 404 on /favicon.ico and the tab
-     shows a generic globe. -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23141A11'/%3E%3Cpath d='M20 46 L32 16 L44 46' fill='none' stroke='%23FFD740' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M25 37 h14' stroke='%23FFD740' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23141A11'/%3E%3Cpath d='M20 46 L32 16 L44 46' fill='none' stroke='%23FFD740' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M25 37 h14' stroke='%23FFD740' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
 /* ---------------------------------------------------------------------------
    Palette lifted from BD MIL OFFICE's Tac class so the two look like one
@@ -224,6 +221,33 @@ button{cursor:pointer}
 mark{background:var(--accent-soft); color:inherit; border-radius:3px; padding:0 1px}
 #more{margin:0 16px 40px; width:calc(100% - 32px)}
 #sentinel{height:1px}
+
+/* These two anchors are the only outbound references in the file. They are
+   LINKS, not subresources — nothing is fetched until someone clicks — so the
+   page still loads with no network at all. */
+.sitelinks{display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin:0}
+.sitelinks a{
+  color:var(--accent); text-decoration:none; font-family:var(--mono);
+  font-size:11.5px; letter-spacing:.04em; border-bottom:1px solid transparent; padding:2px 0;
+}
+.sitelinks a:hover{border-bottom-color:var(--accent)}
+.copyline{
+  margin:0; font-family:var(--mono); font-size:10.5px; letter-spacing:.12em;
+  color:var(--faint); text-transform:uppercase;
+}
+#foot{
+  margin:26px 16px calc(28px + env(safe-area-inset-bottom));
+  padding-top:16px; border-top:1px solid var(--divider);
+  display:flex; flex-direction:column; gap:9px; align-items:center; text-align:center;
+}
+#foot .sitelinks{justify-content:center; gap:18px}
+@media (max-width:759px){
+  #foot{margin:22px 12px calc(24px + env(safe-area-inset-bottom)); gap:8px}
+  #foot .sitelinks{gap:14px}
+  /* 40 px minimum, the same floor as every other control on a phone. The
+     padding does the work so the underline still hugs the text. */
+  .sitelinks a{font-size:12.5px; padding:11px 0}
+}
 /* The topbar is sticky and ~122-133 px tall, and scrollIntoView knows nothing
    about it — a row scrolled into view by the arrow keys or the letter strip
    landed underneath it. scroll-margin-top is exactly the fix. */
@@ -476,6 +500,14 @@ kbd{
 <div id="sentinel" aria-hidden="true" hidden></div>
 <button class="btn" id="more" hidden></button>
 <p class="empty" id="empty" hidden></p>
+<footer id="foot">
+  <span class="sitelinks">
+    <a href="https://www.zyeemzia.com" target="_blank" rel="noopener noreferrer">www.zyeemzia.com</a>
+    <a href="https://bdmil.zyeemzia.com" target="_blank" rel="noopener noreferrer">bdmil.zyeemzia.com</a>
+  </span>
+  <span class="copyline">Copyright &copy; ZyeemZia</span>
+</footer>
+
 <div id="toast" role="status" aria-live="polite"></div>
 
 <dialog id="d-entry"><form method="dialog">
@@ -617,6 +649,13 @@ kbd{
       <span><kbd>F</kbd> &nbsp;star or unstar the selected entry</span>
     </p>
     <p id="h-stat" style="font-family:var(--mono);font-size:11px"></p>
+    <!-- target=_blank needs rel=noopener: without it the opened page gets a
+         handle on this one through window.opener and can navigate it away. -->
+    <p class="sitelinks">
+      <a href="https://www.zyeemzia.com" target="_blank" rel="noopener noreferrer">www.zyeemzia.com</a>
+      <a href="https://bdmil.zyeemzia.com" target="_blank" rel="noopener noreferrer">bdmil.zyeemzia.com</a>
+    </p>
+    <p class="copyline">Copyright &copy; ZyeemZia</p>
   </div>
   <div class="dlg-f"><button class="btn primary" value="ok">CLOSE</button></div>
 </form></dialog>
@@ -1323,6 +1362,10 @@ function abbreviatePlan(cat){
 }
 
 function abbreviateText(text, cat){
+  // Default the category: the only UI call site passes state.cat, but with cat
+  // undefined entriesOf(undefined) is [] and the plan comes back empty, so the
+  // text would silently come back unchanged instead of failing loudly.
+  if (cat === undefined) cat = state.cat;
   if (!text.trim()) return text;
   let lower = text.toLowerCase();
   let toks = tokensOf(text);
@@ -1355,6 +1398,10 @@ function abbreviateText(text, cat){
 }
 
 function deAbbreviateText(text, cat){
+  // Default the category: the only UI call site passes state.cat, but with cat
+  // undefined entriesOf(undefined) is [] and the plan comes back empty, so the
+  // text would silently come back unchanged instead of failing loudly.
+  if (cat === undefined) cat = state.cat;
   if (!text.trim()) return text;
   let lower = text.toLowerCase();
   let toks = tokensOf(text);

@@ -16,7 +16,8 @@ Live at <https://bdmilabbrweb.zyeemzia.com>
 | `icon-192.png`, `icon-512.png` | app icons for Android and desktop |
 | `icon-maskable-512.png` | Android crops icons to a circle; this one has the safe margin |
 | `apple-touch-icon.png` | iOS home-screen icon (180×180, no transparency) |
-| `favicon.png` | browser-tab icon (96×96) |
+| `favicon.png` | browser-tab icon (96×96), same artwork as the app icon |
+| `favicon.ico` | tab icon for browsers that ask for `/favicon.ico` (16/32/48) |
 | `CNAME` | tells GitHub Pages the custom domain. **Do not delete** |
 | `.nojekyll` | skips the Jekyll build step; nothing here needs it |
 | `404.html` | shown for any unknown path |
@@ -26,24 +27,41 @@ There is no build step, no dependencies and no server code. `index.html` request
 nothing from the network — the service worker is there to make the page
 **installable**, not to make it work offline; it already did.
 
+## Credits and links
+
+The page footer and the Help dialog both show `www.zyeemzia.com` and
+`bdmil.zyeemzia.com`, with `Copyright © ZyeemZia` last in each. The footer sits
+below the results, so on a narrow search it is immediately visible; Help is the
+copy that is always one tap away.
+
+These are the only outbound references in the file, and they are links rather
+than subresources — the page still requests nothing from the network to load.
+
 ## The icon
 
 Light sand camouflage, the Bangladesh Armed Forces emblem centred, and the
 owner's signature gold-plated beneath it. Generated procedurally from a fixed
 seed, so rebuilding produces the identical file rather than a new random camo.
 
-Two marks, not one, because they do different jobs:
+One mark everywhere. Every icon file is cut from the same `icon-512` artwork —
+camo field, emblem, gold signature — so the browser tab, the Android launcher
+and the iOS home screen all show the app icon.
 
-- **`icon-192` / `icon-512` / `apple-touch-icon`** carry the full composition.
-- **`favicon.png`** drops the signature — at 16 px it is an unreadable smudge, and
-  leaving it in only muddies the emblem.
-- **`icon-maskable-512`** pulls everything inside the middle 80%, because Android
-  crops icons to a circle and would otherwise cut the signature off.
+- **`icon-192` / `icon-512` / `apple-touch-icon` / `favicon.png`** are the full
+  composition, resampled per size and sharpened for it.
+- **`favicon.ico`** holds 16/32/48 together, each sharpened separately rather
+  than left to the browser to squash one PNG down. It also answers the
+  automatic `/favicon.ico` hit at the site root, so that request is not a 404.
+- **`icon-maskable-512`** keeps the camo full-bleed but pulls the emblem and
+  signature inside the middle 78%, because Android crops icons to a circle and
+  would otherwise cut the signature off.
 
-The page also carries an inline SVG fallback icon so the single-file copy still
-has something in the tab when no PNG sits beside it. Browsers differ over which
-they prefer; delete that one `<link rel="icon" ... data:image/svg+xml ...>` line
-to force the PNG everywhere.
+The page also carries an inline SVG fallback icon, which is all the single-file
+copy has when no PNG sits beside it. **Order in the `<head>` matters:** where
+several equally suitable icons are offered a browser takes the *last* one, and
+Chrome falls back to an earlier `<link>` if a later file 404s. So the SVG is
+declared first and the real artwork after it — the PNG wins on the hosted site,
+the SVG covers the single file. Do not reorder those `<link rel="icon">` lines.
 
 ## Install it
 
