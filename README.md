@@ -16,13 +16,34 @@ Live at <https://bdmilabbrweb.zyeemzia.com>
 | `icon-192.png`, `icon-512.png` | app icons for Android and desktop |
 | `icon-maskable-512.png` | Android crops icons to a circle; this one has the safe margin |
 | `apple-touch-icon.png` | iOS home-screen icon (180×180, no transparency) |
+| `favicon.png` | browser-tab icon (96×96) |
 | `CNAME` | tells GitHub Pages the custom domain. **Do not delete** |
 | `.nojekyll` | skips the Jekyll build step; nothing here needs it |
 | `404.html` | shown for any unknown path |
+| `README.md` | this file — shown on the repo page, not served as part of the site |
 
 There is no build step, no dependencies and no server code. `index.html` requests
 nothing from the network — the service worker is there to make the page
 **installable**, not to make it work offline; it already did.
+
+## The icon
+
+Light sand camouflage, the Bangladesh Armed Forces emblem centred, and the
+owner's signature gold-plated beneath it. Generated procedurally from a fixed
+seed, so rebuilding produces the identical file rather than a new random camo.
+
+Two marks, not one, because they do different jobs:
+
+- **`icon-192` / `icon-512` / `apple-touch-icon`** carry the full composition.
+- **`favicon.png`** drops the signature — at 16 px it is an unreadable smudge, and
+  leaving it in only muddies the emblem.
+- **`icon-maskable-512`** pulls everything inside the middle 80%, because Android
+  crops icons to a circle and would otherwise cut the signature off.
+
+The page also carries an inline SVG fallback icon so the single-file copy still
+has something in the tab when no PNG sits beside it. Browsers differ over which
+they prefer; delete that one `<link rel="icon" ... data:image/svg+xml ...>` line
+to force the PNG everywhere.
 
 ## Install it
 
@@ -64,7 +85,7 @@ the service worker revalidates the document on the next load, so returning
 visitors get the new version without any change to `sw.js`.
 
 Nothing else needs touching between releases — `manifest.webmanifest`, `sw.js`,
-the four icons, `CNAME`, `404.html` and `.nojekyll` all stay as they are.
+the five icons, `CNAME`, `404.html` and `.nojekyll` all stay as they are.
 
 Visitors keep their own added entries and favourites: those live in each
 browser's `localStorage`, not in this repo, so an update never touches them.

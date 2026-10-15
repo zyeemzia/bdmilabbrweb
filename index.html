@@ -207,7 +207,7 @@ button{cursor:pointer}
 #list li.sel{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset}
 .abbr{
   font-family:var(--mono); font-weight:800; font-size:14px; color:var(--accent);
-  flex:none; min-width:72px; max-width:36%; overflow-wrap:anywhere;
+  flex:none; min-width:72px; max-width:40%; overflow-wrap:anywhere;
 }
 .mean{flex:1; min-width:0; overflow-wrap:anywhere}
 .acts{display:flex; gap:2px; flex:none}
@@ -266,6 +266,9 @@ dialog::backdrop{background:rgba(0,0,0,.62)}
 .warn{font-size:12px; color:var(--danger); min-height:1.2em}
 
 /* ---------- quiz ---------- */
+.rowacts{display:flex; flex-direction:column; gap:7px}
+.rowacts .btn{justify-content:flex-start; padding:12px 14px; min-height:46px; font-size:13px}
+#row-mean{font-size:14px; color:var(--text); line-height:1.5}
 #tx textarea{min-height:120px; resize:vertical; font-family:var(--mono); font-size:12.5px; line-height:1.5}
 #tx .txrow{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap}
 #tx .txacts{display:flex; gap:6px}
@@ -343,7 +346,8 @@ kbd{
   .controls{padding:10px 12px 0; gap:8px}
   #list{padding:0 12px 40px; gap:6px}
   #list li{padding:9px 10px}
-  .abbr{min-width:58px; max-width:42%; font-size:13.5px}
+  .abbr{min-width:58px; max-width:46%; font-size:13.5px}
+  #list li{gap:8px}
   .brand b{font-size:15px; letter-spacing:.1em}
   .brand span{display:none}
   .stat{font-size:10px; gap:10px}
@@ -528,6 +532,20 @@ kbd{
     <button class="btn" value="cancel">CANCEL</button>
     <button class="btn primary" id="i-ok" value="ok">IMPORT</button>
   </div>
+</form></dialog>
+
+<dialog id="d-row"><form method="dialog">
+  <div class="dlg-h" id="row-abbr"></div>
+  <div class="dlg-b">
+    <p id="row-mean"></p>
+    <div class="rowacts">
+      <button type="button" class="btn" id="row-star"></button>
+      <button type="button" class="btn" id="row-edit">EDIT</button>
+      <button type="button" class="btn" id="row-copy">COPY</button>
+      <button type="button" class="btn danger" id="row-del">REMOVE</button>
+    </div>
+  </div>
+  <div class="dlg-f"><button class="btn" value="close">CLOSE</button></div>
 </form></dialog>
 
 <dialog id="d-text"><div id="tx">
@@ -878,11 +896,11 @@ async function ask(title, body, okLabel, destructive){
   return (await dlg($('d-ask'))) === 'ok';
 }
 
+/* Only the two glyphs a row actually draws. Edit, copy and delete moved into the
+   action sheet, which uses text labels, so their icons went with them. */
 const ICON = {
   star:'<svg viewBox="0 0 24 24"><path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8L3.6 9.7l5.8-.8z"/></svg>',
-  edit:'<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
-  copy:'<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 6V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h1"/></svg>',
-  del :'<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>'
+  more:'<svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.7" fill="currentColor" stroke="none"/></svg>'
 };
 
 /* ---------- render --------------------------------------------------------- */
@@ -905,10 +923,13 @@ function rowNode(raw, idx, q, fav){
      `.acts button.fav svg{fill:var(--accent)}` matched every row and every star
      rendered already-filled. The class carries the STATE; the button is
      identified by data-act, which mkAct sets from its last argument. */
+  /* Two buttons, not four. The old row spent 166 px of a 461 px line on actions
+     — 36%, and nearer half on a narrow phone — which is why the meaning column
+     was always truncating. Edit, copy and remove now live behind the overflow
+     button; the star stays because it is not merely a button, it is how you SEE
+     which entries are starred without opening anything. */
   acts.appendChild(mkAct(starred ? 'fav' : '', starred ? 'Remove favorite' : 'Add favorite', ICON.star, 'fav'));
-  acts.appendChild(mkAct('', 'Edit', ICON.edit, 'edit'));
-  acts.appendChild(mkAct('', 'Copy', ICON.copy, 'copy'));
-  acts.appendChild(mkAct('del', 'Remove', ICON.del, 'del'));
+  acts.appendChild(mkAct('', 'More actions', ICON.more, 'more'));
 
   li.append(a, m, acts);
   return li;
@@ -1864,13 +1885,41 @@ elList.addEventListener('click', async ev => {
   if (!btn){ selectRow(Number(li.dataset.i)); return; }
   const act = btn.dataset.act;
   if (act === 'fav') toggleFav(raw);
-  else if (act === 'edit') openEntry(raw);
-  else if (act === 'del') delEntry(raw);
-  else if (act === 'copy'){
-    const e = parseEntry(raw);
-    toast(await copy(e.a + ' — ' + e.m) ? 'Copied.' : 'Copy failed.', 'ok');
-  }
+  else if (act === 'more') openRowMenu(raw);
 });
+
+/* ---------- the row action sheet ------------------------------------------- */
+/* One raw string, held while the sheet is open. Not read back off the DOM when a
+   button is pressed: the list re-renders underneath (a star, a cross-tab sync),
+   and the element the sheet was opened from may no longer exist. */
+let _rowRaw = null;
+
+function openRowMenu(raw){
+  _rowRaw = raw;
+  const e = parseEntry(raw);
+  $('row-abbr').textContent = e.a || '—';
+  $('row-mean').textContent = e.m;                       // textContent: entry text is never markup
+  const starred = favOf(state.cat).has(raw);
+  $('row-star').textContent = starred ? 'REMOVE FROM FAVOURITES' : 'ADD TO FAVOURITES';
+  $('d-row').showModal();
+}
+
+/* Every action closes the sheet FIRST. openEntry and delEntry each open a dialog
+   of their own, and a modal opened from inside another modal is a mess the
+   browser does not promise to unwind in order. */
+function rowAction(fn){
+  const raw = _rowRaw;
+  $('d-row').close();
+  _rowRaw = null;
+  if (raw != null) fn(raw);
+}
+$('row-star').addEventListener('click', () => rowAction((raw) => toggleFav(raw)));
+$('row-edit').addEventListener('click', () => rowAction((raw) => openEntry(raw)));
+$('row-del').addEventListener('click',  () => rowAction((raw) => delEntry(raw)));
+$('row-copy').addEventListener('click', () => rowAction(async (raw) => {
+  const e = parseEntry(raw);
+  toast(await copy(e.a + ' — ' + e.m) ? 'Copied.' : 'Copy failed.', 'ok');
+}));
 
 document.addEventListener('keydown', async ev => {
   const open = document.querySelector('dialog[open]');
