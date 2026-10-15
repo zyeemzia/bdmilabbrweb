@@ -68,13 +68,23 @@ the SVG covers the single file. Do not reorder those `<link rel="icon">` lines.
 **Android / Chrome / Edge / desktop** — an **INSTALL APP** button appears in the
 tools row when the browser offers it, or use the browser menu's "Install app".
 
-**iPhone / iPad** — Safari gives no install prompt, so the page shows a one-time
-hint: **Share → Add to Home Screen**.
+**iPhone / iPad — there is no INSTALL APP button, in any browser.** That button is
+driven by `beforeinstallprompt`, which no iOS browser implements: every browser on
+iOS is WebKit underneath, so Chrome, Edge and Firefox there behave like Safari and
+fire nothing. It is a platform limit, not a missing feature. The page therefore
+shows a one-time hint instead: **Share → Add to Home Screen**.
 
-Installing is not just cosmetic. **Safari deletes script-writable storage for
-sites not visited in 7 days.** A visitor's own added entries and stars are exactly
-that. Adding the site to the Home Screen exempts it, and the page also asks the
-browser for persistent storage the first time you edit anything.
+The hint appears in Safari at any version, and in Chrome / Edge / Firefox / Opera
+on **iOS 16.4 or newer** — the release where third-party iOS browsers were first
+allowed to add Home Screen web apps. Below 16.4 those browsers genuinely cannot,
+so the hint stays hidden there rather than giving advice that would dead-end. The
+wording adapts, because Share sits at the bottom of the screen in Safari and in a
+menu elsewhere.
+
+Installing is not just cosmetic. **iOS deletes script-writable storage for sites
+not visited in 7 days.** A visitor's own added entries and stars are exactly that.
+Adding the site to the Home Screen exempts it, and the page also asks the browser
+for persistent storage the first time you edit anything.
 
 ## Back up what you added
 

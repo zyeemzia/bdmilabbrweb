@@ -442,13 +442,12 @@ kbd{
 </div>
 </div>
 
-<!-- iOS offers no install prompt, so the only way to discover Add to Home Screen
-     is to be told. Shown once, on iOS Safari, when not already installed. -->
+<!-- No iOS browser fires beforeinstallprompt, so the INSTALL APP button can
+     never appear there and being told is the only discovery path. The wording is
+     filled in at runtime because Share sits in a different place in each browser.
+     Shown once, when not already installed. -->
 <section class="banner" id="ios-hint" hidden>
-  <span><b>Install it.</b> Tap <b>Share</b> at the bottom of Safari, then
-  <b>Add to Home Screen</b>. It then opens full-screen and works with no signal &mdash;
-  and the real reason: Safari stops deleting your added entries and stars after a
-  week of not visiting.</span>
+  <span id="ios-hint-t"></span>
   <button class="x" id="ios-hint-x" title="Dismiss" aria-label="Dismiss">&times;</button>
 </section>
 
@@ -2155,13 +2154,42 @@ $('install').addEventListener('click', async () => {
 });
 addEventListener('appinstalled', () => { _installPrompt = null; paintInstall(); sset('installed','1'); });
 
-/* iOS has no beforeinstallprompt and no install UI of its own, so the hint is
-   the only discovery path. Once, then never again. */
-function maybeIosHint(){
+/* No iOS browser implements beforeinstallprompt — every one of them is WebKit
+   underneath — so #install can never show there and this hint is the only
+   discovery path. Once, then never again.
+
+   This used to exclude Chrome/Firefox/Edge on iOS, which was right until iOS
+   16.4: before that only Safari could add a Home Screen web app, so pointing a
+   Chrome user at Share would have been a dead end. Since 16.4 those browsers can
+   add one too, and excluding them meant the people most likely to go looking for
+   an install option were the only ones never told how. The version floor stays,
+   because on an older iOS the advice really would be wrong. */
+function iosInfo(){
   const ua = navigator.userAgent || '';
   const iOS = /iP(hone|od|ad)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
-  const webkit = /WebKit/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
-  if (!iOS || !webkit || standalone() || sget('iosHint') === 'done') return;
+  const m = ua.match(/OS (\d+)[._](\d+)/);
+  const ver = m ? parseInt(m[1], 10) + parseInt(m[2], 10) / 100 : 0;
+  let app = 'safari';
+  if (/CriOS/.test(ua)) app = 'chrome';
+  else if (/FxiOS/.test(ua)) app = 'firefox';
+  else if (/EdgiOS/.test(ua)) app = 'edge';
+  else if (/OPiOS|OPT\//.test(ua)) app = 'opera';
+  return { iOS, ver, app };
+}
+
+function maybeIosHint(){
+  const { iOS, ver, app } = iosInfo();
+  if (!iOS || standalone() || sget('iosHint') === 'done') return;
+  // Third-party iOS browsers only gained Add to Home Screen in 16.4. Where the
+  // UA carries no version at all, trust Safari and stay quiet elsewhere.
+  if (app !== 'safari' && !(ver >= 16.04)) return;
+  const where = app === 'safari'
+    ? 'Tap <b>Share</b> at the bottom of Safari'
+    : 'Open the <b>Share</b> menu';
+  $('ios-hint-t').innerHTML =
+    '<b>Install it.</b> ' + where + ', then <b>Add to Home Screen</b>. '
+    + 'It then opens full-screen and works with no signal &mdash; and the real reason: '
+    + 'iOS stops deleting your added entries and stars after a week of not visiting.';
   $('ios-hint').hidden = false;
 }
 $('ios-hint-x').addEventListener('click', () => { $('ios-hint').hidden = true; sset('iosHint','done'); });
