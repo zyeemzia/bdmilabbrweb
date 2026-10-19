@@ -418,6 +418,7 @@ kbd{
 @media (max-width:759px){ .banner{margin:8px 12px 0} }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
+    <style>.tx-dialog{padding:0;border:0;background:transparent;width:min(960px,calc(100vw - 20px));max-height:calc(100vh - 20px);overflow:auto}.tx-dialog::backdrop{background:rgba(2,6,23,.6);backdrop-filter:blur(4px)}.tx-dialog .tx{margin:0}.tx-x{position:sticky;float:right;top:10px;margin:10px 10px -46px 0;z-index:3;width:36px;height:36px;border-radius:50%;border:1px solid rgba(148,163,184,.4);background:rgba(15,23,42,.65);color:#fff;font-size:22px;line-height:1;cursor:pointer}</style>
 </head>
 <body>
 <!-- Header and search travel together and stay pinned. On a phone the search
@@ -509,10 +510,12 @@ kbd{
   <span class="sitelinks">
     <a href="https://www.zyeemzia.com" target="_blank" rel="noopener noreferrer">www.zyeemzia.com</a>
     <a href="https://bdmil.zyeemzia.com" target="_blank" rel="noopener noreferrer">bdmil.zyeemzia.com</a>
+    <a href="#contact" id="txOpen">Contact</a>
   </span>
   <span class="copyline">Copyright &copy; ZyeemZia</span>
 </footer>
 
+<dialog id="d-contact" class="tx-dialog" aria-label="Direct Transmission Hub"><button type="button" class="tx-x" id="txClose" aria-label="Close">&times;</button><div class="tx-mount" id="contact" data-tx-dark='html[data-theme="dark"]' data-tx-light='html[data-theme="light"]' data-tx-auto="media" data-tx-heading="h2" data-tx-regarding="BD MIL ABBR (web)" data-tx-source="bdmilabbrweb.zyeemzia.com · BD MIL ABBR web" data-tx-lead="Suggest an abbreviation, report a mistake or ask about BD MIL ABBR: transmit a message straight to the ZyeemZia command desk."></div></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <dialog id="d-entry"><form method="dialog">
@@ -2410,5 +2413,6 @@ maybeIosHint();
 paintInstall();
 if (!storageOk) toast('Browser storage is unavailable — this session works, but changes will not be remembered.', 'err', 6000);
 </script>
+    <script>(function(){var d=document.getElementById("d-contact"),o=document.getElementById("txOpen"),c=document.getElementById("txClose");var ld=null;function load(){if(window.ZZTransmit)return Promise.resolve();if(!ld)ld=new Promise(function(res,rej){var l=document.createElement("link");l.rel="stylesheet";l.href="https://zyeemzia.com/transmit.css?v=3";document.head.appendChild(l);var s=document.createElement("script");s.src="https://zyeemzia.com/transmit.js?v=3";s.onload=res;s.onerror=function(){ld=null;rej();};document.head.appendChild(s);});return ld;}function open(e){if(e)e.preventDefault();if(d.open)return;var m=d.querySelector(".tx-mount");load().then(function(){window.ZZTransmit.mount(m);}).catch(function(){m.innerHTML='<p style="padding:24px;background:#fff;border-radius:16px;margin:0">The contact form needs an internet connection. Email <a href="mailto:admin@zyeemzia.com">admin@zyeemzia.com</a>.</p>';}).then(function(){var f=d.querySelector("input[name=Name]");if(f)f.focus();});d.showModal();}o.addEventListener("click",open);c.addEventListener("click",function(){d.close();});d.addEventListener("click",function(e){if(e.target===d)d.close();});if(location.hash==="#contact"||/[?&]sent=1/.test(location.search))addEventListener("load",function(){open();});})();</script>
 </body>
 </html>
