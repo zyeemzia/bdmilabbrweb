@@ -13,7 +13,7 @@
  * document on every navigation means a release needs no edit here at all — and if
  * someone does forget to bump CACHE, nothing breaks.
  */
-const CACHE = 'bdmilabbr-v4';
+const CACHE = 'bdmilabbr-v5';
 const SHELL = [
   './',
   './index.html',
