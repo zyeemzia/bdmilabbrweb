@@ -206,7 +206,7 @@ button{cursor:pointer}
   font-family:var(--mono); font-weight:800; font-size:14px; color:var(--accent);
   flex:none; min-width:72px; max-width:40%; overflow-wrap:anywhere;
 }
-.mean{flex:1; min-width:0; overflow-wrap:anywhere}
+.mean{flex:1; min-width:0; overflow-wrap:anywhere; text-align:left}
 .acts{display:flex; gap:2px; flex:none}
 .acts button{
   background:transparent; border:0; color:var(--faint); width:32px; height:32px;
@@ -336,10 +336,11 @@ dialog::backdrop{background:rgba(0,0,0,.62)}
   position:fixed; left:50%; bottom:22px; transform:translate(-50%,140%);
   background:var(--panel-alt); border:1px solid var(--border); border-left:3px solid var(--accent);
   color:var(--text); padding:11px 16px; border-radius:11px; box-shadow:var(--shadow);
-  max-width:calc(100vw - 32px); font-size:13px; z-index:90; transition:transform .22s ease;
-  pointer-events:none;
+  max-width:calc(100vw - 32px); font-size:13px; z-index:90;
+  transition:transform .22s ease, opacity .22s ease, visibility 0s linear .22s;
+  pointer-events:none; opacity:0; visibility:hidden;
 }
-#toast.on{transform:translate(-50%,0)}
+#toast.on{transform:translate(-50%,0); opacity:1; visibility:visible; transition:transform .22s ease, opacity .22s ease}
 #toast.err{border-left-color:var(--danger)}
 #toast.ok{border-left-color:var(--success)}
 
@@ -512,7 +513,7 @@ kbd{
     <a href="https://bdmil.zyeemzia.com" target="_blank" rel="noopener noreferrer">bdmil.zyeemzia.com</a>
     <a href="https://zyeemzia.com/privacy-militaryabbreviation.html" target="_blank" rel="noopener noreferrer">Privacy</a>
     <a href="https://policy.zyeemzia.com" target="_blank" rel="noopener noreferrer">Trust Centre</a>
-    <a href="https://zbzai.zyeemzia.com" target="_blank" rel="noopener noreferrer" title="Free offline AI for a unit or office network.">ZBZAI&trade; offline AI</a>
+    <a href="https://ai.zyeemzia.com" target="_blank" rel="noopener noreferrer" title="Free AI in English or Bangla.">ZyeemZia AI</a>
     <a href="#contact" id="txOpen">Contact</a>
   </span>
   <span class="copyline">Copyright &copy; ZyeemZia</span>
@@ -666,7 +667,7 @@ kbd{
       <a href="https://www.zyeemzia.com" target="_blank" rel="noopener noreferrer">www.zyeemzia.com</a>
       <a href="https://bdmil.zyeemzia.com" target="_blank" rel="noopener noreferrer">bdmil.zyeemzia.com</a>
     </p>
-    <p style="font-size:12px">Also from ZyeemZia&trade;: <a href="https://zbzai.zyeemzia.com" target="_blank" rel="noopener noreferrer">ZBZAI&trade;</a>, a free private AI for a unit or office network. It reads Word, Excel, PowerPoint and PDF files, hands back the edited file and types what you say, all with no internet. Online, it looks up the latest news, researches a topic with numbered sources, shows real pictures, checks and runs the code it writes, and with your permission works on the PC. With no AI model it still answers from a free internet lookup, in English or Bangla.</p>
+    <p style="font-size:12px">Also from ZyeemZia&trade;: <a href="https://ai.zyeemzia.com" target="_blank" rel="noopener noreferrer">ZyeemZia AI</a>, a free AI that chats, writes, researches a topic with numbered sources, shows real pictures and runs the code it writes, in English or Bangla. It includes ZBZAI&trade;, which installs free on a Windows PC and works with no internet.</p>
     <p class="copyline">Copyright &copy; ZyeemZia</p>
   </div>
   <div class="dlg-f"><button class="btn primary" value="ok">CLOSE</button></div>
