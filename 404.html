@@ -5,6 +5,8 @@
 <style>
 /* Form controls use the page font; browsers otherwise fall back to Arial. */
 button, input, select, textarea { font-family: inherit; }
+/* Small print never drops below 12px on screen. */
+small { font-size: max(12px, .85em); }
 
 :root{--bg:#0A0D08;--panel:#151C12;--text:#fff;--sub:rgba(255,255,255,.6);--accent:#FFD740;--border:rgba(255,255,255,.1)}
 @media(prefers-color-scheme:light){:root{--bg:#ECEFF1;--panel:#fff;--text:rgba(0,0,0,.87);--sub:rgba(0,0,0,.54);--accent:#37474F;--border:#CFD8DC}}
